@@ -7,8 +7,8 @@ export default function dashboardScreen() {
 
   return (
     <View>
-      <Text>Pantalla de Detalles</Text>
-      <Button title="Volver a Inicio" onPress={() => router.push(Routes.space)} />
+      <Text>Hello world</Text>
+      <Button title="Ir a espacios" onPress={() => router.push(Routes.space)} />
     </View>
   );
 }
