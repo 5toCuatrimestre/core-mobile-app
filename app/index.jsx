@@ -1,7 +1,11 @@
-import { black, white } from "colors";
-import { Alert, Text, View, Image, StyleSheet, TextInput,TouchableOpacity } from "react-native";
+
+import {Text, View, Image, StyleSheet, TextInput,TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
+import { Routes } from "../utils/routes";
 
 export default function Index() {
+  const router = useRouter();
+
   return (
     <View
       style={styles.container}
@@ -10,7 +14,7 @@ export default function Index() {
       <Text style={styles.title}>Iniciar sesión</Text>
       <TextInput style={styles.input} placeholder="Correo"></TextInput>
       <TextInput style={styles.input} placeholder="Contraseña"></TextInput>
-      <TouchableOpacity style={styles.button}onPress={()=>Alert.alert("Entrando...")}>
+      <TouchableOpacity style={styles.button} onPress={() => router.push(Routes.dashboard)}>
         <Text style={styles.buttonText}>Entrar</Text>
       </TouchableOpacity>
     </View>
