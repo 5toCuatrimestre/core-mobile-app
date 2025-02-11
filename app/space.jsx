@@ -1,119 +1,248 @@
 import React, { useRef, useState } from "react";
-import { View, StyleSheet, Animated, PanResponder, Text, Dimensions } from "react-native";
+import {
+  View,
+  StyleSheet,
+  PanResponder,
+  Text,
+  Animated,
+  Alert,
+} from "react-native";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import ChairsModal from "../components/ChairsModal"; // 🔹 Importamos el modal externo
 
 export default function Space() {
-  const screenWidth = Dimensions.get("window").width;
-  const screenHeight = Dimensions.get("window").height;
   const [droppedItems, setDroppedItems] = useState([]);
-  const [isDragging, setIsDragging] = useState(false);
+  const [draggingItem, setDraggingItem] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [currentItem, setCurrentItem] = useState(null);
+  const [chairs, setChairs] = useState("");
   const canvasRef = useRef(null);
+  const idCounterRef = useRef(1);
+  const ALIGNMENT_THRESHOLD = 5;
+  let lastTap = 0;
 
-  const pan = useRef(new Animated.ValueXY()).current;
+  const handleDoubleClick = (item) => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      Alert.alert(
+        "Información de la Mesa",
+        `🆔 ID: ${item.id}\n📍 X: ${item.xPercent.toFixed(
+          1
+        )}% | Y: ${item.yPercent.toFixed(1)}%\n💺 Lugares: ${item.chairs}`
+      );
+    }
+    lastTap = now;
+  };
+
+  const addTableWithChairs = (xPercent, yPercent) => {
+    setCurrentItem({ id: idCounterRef.current, xPercent, yPercent });
+    setShowModal(true);
+  };
+
+  const confirmTable = () => {
+    if (!chairs || isNaN(chairs) || chairs <= 0) {
+      Alert.alert("Error", "Ingresa una cantidad válida de sillas.");
+      return;
+    }
+
+    setDroppedItems((prevItems) => [
+      ...prevItems,
+      {
+        ...currentItem,
+        id: idCounterRef.current++,
+        chairs: chairs,
+      },
+    ]);
+
+    setShowModal(false);
+    setChairs("");
+  };
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        setIsDragging(true);
+      onPanResponderMove: (_, gesture) => {
+        canvasRef.current.measure((fx, fy, width, height, px, py) => {
+          const xPercent = ((gesture.moveX - px) / width) * 100;
+          const yPercent = ((gesture.moveY - py) / height) * 100;
+          setDraggingItem({ xPercent, yPercent });
+        });
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false }
-      ),
       onPanResponderRelease: (_, gesture) => {
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
-          // Convertimos las coordenadas a porcentaje del tamaño del lienzo
-          const percentX = ((gesture.moveX - px) / width) * 100;
-          const percentY = ((gesture.moveY - py) / height) * 100;
+          let xPercent = ((gesture.moveX - px) / width) * 100;
+          let yPercent = ((gesture.moveY - py) / height) * 100;
 
-          // Validamos que el objeto quede dentro del lienzo
-          if (percentX >= 0 && percentX <= 100 && percentY >= 0 && percentY <= 100) {
-            setDroppedItems((prevItems) => [
-              ...prevItems,
-              { xPercent: percentX, yPercent: percentY, id: Date.now() },
-            ]);
+          if (
+            xPercent >= 0 &&
+            xPercent <= 100 &&
+            yPercent >= 0 &&
+            yPercent <= 100
+          ) {
+            addTableWithChairs(xPercent, yPercent);
           }
-
-          pan.setValue({ x: 0, y: 0 });
-          setIsDragging(false);
         });
+
+        setDraggingItem(null);
       },
     })
   ).current;
 
+  const getItemPanResponder = (item) =>
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gesture) => {
+        canvasRef.current.measure((fx, fy, width, height, px, py) => {
+          let xPercent = ((gesture.moveX - px) / width) * 100;
+          let yPercent = ((gesture.moveY - py) / height) * 100;
+          const alignedPosition = getAlignedPosition(
+            { xPercent, yPercent },
+            item.id
+          );
+          setDroppedItems((prevItems) =>
+            prevItems.map((prevItem) =>
+              prevItem.id === item.id
+                ? {
+                    ...prevItem,
+                    xPercent: alignedPosition.x,
+                    yPercent: alignedPosition.y,
+                  }
+                : prevItem
+            )
+          );
+        });
+      },
+      onPanResponderRelease: () => {
+        handleDoubleClick(item);
+      },
+    });
+
+  const getAlignedPosition = (current, movingId = null) => {
+    let alignedX = current.xPercent;
+    let alignedY = current.yPercent;
+
+    droppedItems.forEach((item) => {
+      if (movingId !== null && item.id === movingId) return;
+
+      if (Math.abs(item.yPercent - current.yPercent) <= ALIGNMENT_THRESHOLD) {
+        alignedY = item.yPercent;
+      }
+
+      if (Math.abs(item.xPercent - current.xPercent) <= ALIGNMENT_THRESHOLD) {
+        alignedX = item.xPercent;
+      }
+    });
+
+    return { x: alignedX, y: alignedY };
+  };
+
   return (
     <View style={styles.container}>
-      {/* Header con instrucciones */}
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Arrastra y suelta los objetos en el lienzo</Text>
-
-        {/* Cuadrado Azul Centrado */}
-        <Animated.View
-          {...panResponder.panHandlers}
-          style={[
-            styles.draggable,
-            { transform: pan.getTranslateTransform(), zIndex: isDragging ? 1000 : 1 },
-          ]}
-        />
-      </View>
-
-      {/* Lienzo */}
       <View ref={canvasRef} style={styles.canvas}>
+        {/* Ícono de mesa mientras se arrastra dentro del lienzo */}
+        {draggingItem && (
+          <View
+            style={[
+              styles.iconWrapper,
+              {
+                left: `${draggingItem.xPercent}%`,
+                top: `${draggingItem.yPercent}%`,
+              },
+            ]}
+          >
+            <Icon name="table-restaurant" size={30} color="gray" />
+          </View>
+        )}
+
+        {/* Ícono de mesa principal */}
+        <View {...panResponder.panHandlers} style={styles.draggable}>
+          <View style={styles.draggableContainer}>
+            <Icon name="table-restaurant" size={30} color="white" />
+          </View>
+        </View>
+
+        {/* Mesas en el lienzo */}
         {droppedItems.map((item) => (
           <View
             key={item.id}
+            {...getItemPanResponder(item).panHandlers}
             style={[
-              styles.square,
+              styles.iconWrapper,
               { left: `${item.xPercent}%`, top: `${item.yPercent}%` },
             ]}
-          />
+          >
+            <View style={styles.table}>
+              <Icon name="table-restaurant" size={30} color="white" />
+              <View style={{ alignItems: "center", width: "100%" }}>
+                <Text style={styles.chairsText}>{item.chairs}</Text>
+              </View>
+            </View>
+          </View>
         ))}
       </View>
+
+      {/* Modal para ingresar la cantidad de sillas */}
+      <ChairsModal
+        visible={showModal}
+        chairs={chairs}
+        setChairs={setChairs}
+        confirmTable={confirmTable}
+      />
     </View>
   );
 }
 
-// 🎨 Estilos con el cuadrado azul centrado
+// 🎨 **Estilos Mejorados**
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    height: 120,
-    backgroundColor: "#f0f0f0",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    marginBottom: 20,
-  },
-  headerText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 10, // Espacio para el cuadrado azul
+    backgroundColor: "#EAEAEA",
   },
   canvas: {
     flex: 1,
-    backgroundColor: "#ddd",
+    backgroundColor: "#f5f5f5",
     position: "relative",
+    borderRadius: 20,
+    margin: 10,
     borderWidth: 2,
-    borderColor: "gray",
+    borderColor: "#D1D5DB",
   },
-  square: {
+  iconWrapper: {
+    position: "absolute",
+    alignItems: "center",
+  },
+  chairsText: {
+    fontSize: 12, 
+    color: "white",
+    fontWeight: "bold",
+    position: "absolute",
+    bottom: -32, 
+    alignSelf: "center", 
+    backgroundColor: "rgba(0, 0, 0, 0.6)", 
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 5,
+    minWidth: 28, 
+    textAlign: "center", 
+  },  
+  table: {
+    backgroundColor: "#FF6363",
+    padding: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
     width: 50,
     height: 50,
-    backgroundColor: "red",
-    position: "absolute",
-    borderRadius: 5,
   },
   draggable: {
-    width: 50,
-    height: 50,
-    backgroundColor: "blue",
     position: "absolute",
-    top: 80, // 📌 Lo colocamos debajo del texto
-    left: "50%", // 📌 Lo centramos horizontalmente
-    marginLeft: -25, // 📌 Ajuste para centrarlo bien
-    borderRadius: 5,
+    bottom: 20,
+    left: "50%",
+    marginLeft: -20,
+  },
+  draggableContainer: {
+    backgroundColor: "#3B82F6",
+    padding: 10,
+    borderRadius: 10,
   },
 });
