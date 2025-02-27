@@ -1,8 +1,11 @@
 import { Stack } from "expo-router";
-import "../global.css"
+import { StyleContextProvider } from "../utils/StyleContext"; 
+import "../global.css";
 
 export default function RootLayout() {
   return (
-      <Stack />
+      <StyleContextProvider>
+        <Stack />
+      </StyleContextProvider>
   );
 }

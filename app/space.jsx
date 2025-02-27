@@ -28,11 +28,16 @@ export default function Space() {
         "Información de la Mesa",
         `🆔 ID: ${item.id}\n📍 X: ${item.xPercent.toFixed(
           1
-        )}% | Y: ${item.yPercent.toFixed(1)}%\n💺 Lugares: ${item.chairs}`
+        )}% | Y: ${item.yPercent.toFixed(1)}%\n💺 Lugares: ${item.chairs}\n\n➕ Crear Cuenta`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Crear Cuenta", onPress: () => Alert.alert(`Cuenta creada para la mesa ${item.id}`) },
+        ]
       );
     }
     lastTap = now;
-  };
+  }; 
+  
 
   const addTableWithChairs = (xPercent, yPercent) => {
     setCurrentItem({ id: idCounterRef.current, xPercent, yPercent });

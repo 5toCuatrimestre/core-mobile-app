@@ -1,10 +1,14 @@
-import React, { useState } from "react";
-import { View, Text } from "react-native";
-import { TextInput, Checkbox, Button } from "react-native-paper";
+import React, { useState, useContext } from "react";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
+
+import { Checkbox } from "react-native-paper";
+import { StyleContext } from "../utils/StyleContext";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function AuthScreen() {
   const router = useRouter();
+  const { style } = useContext(StyleContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
@@ -15,52 +19,56 @@ export default function AuthScreen() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center bg-gray-900 px-6">
-      <View className="w-full max-w-sm bg-gray-800 p-6 rounded-2xl shadow-lg gap-5">
-        <Text className="text-white text-xl font-semibold text-center mb-6">
-          Iniciar Sesión
+    <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: style.BgInterface }}>
+      <View className="w-full max-w-sm p-6 rounded-2xl shadow-lg gap-5" style={{ backgroundColor: style.BgCard }}>
+        <Text className="text-xl font-semibold text-center mb-6" style={{ color: style.H2 }}>
+          Iniciar sesión
         </Text>
 
         {/* Campo de Email */}
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          mode="outlined"
-          left={<TextInput.Icon icon="email" />}
-          className="text-white"
-        />
+        <View className="flex-row items-center border rounded-md px-3 py-2" style={{ borderColor: style.H3 }}>
+          <Ionicons name="mail-outline" size={20} color={style.H3} className="mr-2" />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Correo electrónico"
+            placeholderTextColor={style.H3}
+            className="flex-1 text-white"
+          />
+        </View>
 
         {/* Campo de Contraseña */}
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          mode="outlined"
-          secureTextEntry
-          left={<TextInput.Icon icon="lock" />}
-          className="text-white"
-        />
+        <View className="flex-row items-center border rounded-md px-3 py-2" style={{ borderColor: style.H3 }}>
+          <Ionicons name="lock-closed-outline" size={20} color={style.H3} className="mr-2" />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Contraseña"
+            placeholderTextColor={style.H3}
+            secureTextEntry
+            className="flex-1 text-white"
+          />
+        </View>
 
         {/* Recordar Sesión y Olvidar Contraseña */}
         <View className="flex-row justify-between items-center mb-4">
-          <View className="flex-row items-center">
-            <Checkbox
-              status={remember ? "checked" : "unchecked"}
-              onPress={() => setRemember(!remember)}
-              color="#4F46E5"
-            />
-            <Text className="text-white ml-2">Recordarme</Text>
-          </View>
-          <Text className="text-indigo-400">Olvidé mi contraseña</Text>
+          <TouchableOpacity onPress={() => setRemember(!remember)} className="flex-row items-center">
+            <Checkbox status={remember ? "checked" : "unchecked"} color={style.BgButton} />
+            <Text className="ml-2" style={{ color: style.H3 }}>
+              Recordarme
+            </Text>
+          </TouchableOpacity>
+          <Text className="text-sm" style={{ color: style.H3 }}>
+            ¿Olvidaste tu contraseña?
+          </Text>
         </View>
 
         {/* Botón de Login */}
-        <Button
-          mode="contained"
-          onPress={handleLogin}
-          className="bg-indigo-600 py-2 rounded-md"
-        >
-          Iniciar Sesión
-        </Button>
+        <TouchableOpacity onPress={handleLogin} className="py-2 rounded-md" style={{ backgroundColor: style.BgButton }}>
+          <Text className="text-center font-semibold" style={{ color: style.P }}>
+            Iniciar sesión
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
