@@ -1,8 +1,8 @@
 import React, { useState, useContext } from "react";
 import { View, Text, TextInput, FlatList, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { Routes } from "../utils/routes";
-import { StyleContext } from "../utils/StyleContext";
+import { Routes } from "../../utils/routes";
+import { StyleContext } from "../../utils/StyleContext";
 
 export default function Dashboard() {
   const router = useRouter();

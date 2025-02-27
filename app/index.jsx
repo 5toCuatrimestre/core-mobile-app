@@ -19,15 +19,32 @@ export default function AuthScreen() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: style.BgInterface }}>
-      <View className="w-full max-w-sm p-6 rounded-2xl shadow-lg gap-5" style={{ backgroundColor: style.BgCard }}>
-        <Text className="text-xl font-semibold text-center mb-6" style={{ color: style.H2 }}>
+    <View
+      className="flex-1 items-center justify-center"
+      style={{ backgroundColor: style.BgInterface }}
+    >
+      <View
+        className="w-full max-w-sm p-12 rounded-2xl shadow-lg gap-5"
+        style={{ backgroundColor: style.BgCard }}
+      >
+        <Text
+          className="text-xl font-semibold text-center mb-6"
+          style={{ color: style.H2 }}
+        >
           Iniciar sesión
         </Text>
 
         {/* Campo de Email */}
-        <View className="flex-row items-center border rounded-md px-3 py-2" style={{ borderColor: style.H3 }}>
-          <Ionicons name="mail-outline" size={20} color={style.H3} className="mr-2" />
+        <View
+          className="flex-row items-center border rounded-md px-3 py-2"
+          style={{ borderColor: style.H3 }}
+        >
+          <Ionicons
+            name="mail-outline"
+            size={20}
+            color={style.H3}
+            className="mr-2"
+          />
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -38,8 +55,16 @@ export default function AuthScreen() {
         </View>
 
         {/* Campo de Contraseña */}
-        <View className="flex-row items-center border rounded-md px-3 py-2" style={{ borderColor: style.H3 }}>
-          <Ionicons name="lock-closed-outline" size={20} color={style.H3} className="mr-2" />
+        <View
+          className="flex-row items-center border rounded-md px-3 py-2"
+          style={{ borderColor: style.H3 }}
+        >
+          <Ionicons
+            name="lock-closed-outline"
+            size={20}
+            color={style.H3}
+            className="mr-2"
+          />
           <TextInput
             value={password}
             onChangeText={setPassword}
@@ -52,8 +77,14 @@ export default function AuthScreen() {
 
         {/* Recordar Sesión y Olvidar Contraseña */}
         <View className="flex-row justify-between items-center mb-4">
-          <TouchableOpacity onPress={() => setRemember(!remember)} className="flex-row items-center">
-            <Checkbox status={remember ? "checked" : "unchecked"} color={style.BgButton} />
+          <TouchableOpacity
+            onPress={() => setRemember(!remember)}
+            className="flex-row items-center"
+          >
+            <Checkbox
+              status={remember ? "checked" : "unchecked"}
+              color={style.BgButton}
+            />
             <Text className="ml-2" style={{ color: style.H3 }}>
               Recordarme
             </Text>
@@ -64,8 +95,15 @@ export default function AuthScreen() {
         </View>
 
         {/* Botón de Login */}
-        <TouchableOpacity onPress={handleLogin} className="py-2 rounded-md" style={{ backgroundColor: style.BgButton }}>
-          <Text className="text-center font-semibold" style={{ color: style.P }}>
+        <TouchableOpacity
+          onPress={handleLogin}
+          className="py-2 rounded-md"
+          style={{ backgroundColor: style.BgButton }}
+        >
+          <Text
+            className="text-center font-semibold"
+            style={{ color: style.P }}
+          >
             Iniciar sesión
           </Text>
         </TouchableOpacity>

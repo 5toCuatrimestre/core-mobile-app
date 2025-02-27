@@ -32,13 +32,13 @@ export function StyleContextProvider({ children }) {
         } else {
           const defaultStyle = {
             H1: "#ffffff",
-            H2: "#ffffff",
-            H3: "#ffffff",
+            H2: "#cccccc",
+            H3: "#aaaaaa",
             P: "#000000",
-            BgCard: "#05004a",
-            BgInterface: "#1f24ab",
-            BgButton: "#ffffff",
-          };
+            BgCard: "#222222",
+            BgInterface: "#111111",
+            BgButton: "#c7c7c7",
+          }
           setStyle(defaultStyle);
           await AsyncStorage.setItem("style", JSON.stringify(defaultStyle));
         }

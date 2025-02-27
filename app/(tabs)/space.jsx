@@ -4,11 +4,10 @@ import {
   StyleSheet,
   PanResponder,
   Text,
-  Animated,
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import ChairsModal from "../components/ChairsModal"; // 🔹 Importamos el modal externo
+import ChairsModal from "../../components/ChairsModal"; // 🔹 Importamos el modal externo
 
 export default function Space() {
   const [droppedItems, setDroppedItems] = useState([]);
