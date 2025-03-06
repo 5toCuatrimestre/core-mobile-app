@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import ChairsModal from "../../components/ChairsModal"; // 🔹 Importamos el modal externo
+import { useRouter } from "expo-router";
 
 export default function Space() {
   const [droppedItems, setDroppedItems] = useState([]);
@@ -18,6 +19,7 @@ export default function Space() {
   const canvasRef = useRef(null);
   const idCounterRef = useRef(1);
   const ALIGNMENT_THRESHOLD = 5;
+  const router = useRouter();
   let lastTap = 0;
 
   const handleDoubleClick = (item) => {
@@ -25,17 +27,19 @@ export default function Space() {
     if (now - lastTap < 300) {
       Alert.alert(
         "Información de la Mesa",
-        `🆔 ID: ${item.id}\n📍 X: ${item.xPercent.toFixed(
-          1
-        )}% | Y: ${item.yPercent.toFixed(1)}%\n💺 Lugares: ${item.chairs}\n\n➕ Crear Cuenta`,
+        `🆔 ID: ${item.id}\n📍 X: ${item.xPercent.toFixed(1)}% | Y: ${item.yPercent.toFixed(1)}%\n💺 Lugares: ${item.chairs}`,
         [
           { text: "Cancelar", style: "cancel" },
-          { text: "Crear Cuenta", onPress: () => Alert.alert(`Cuenta creada para la mesa ${item.id}`) },
+          { 
+            text: "Crear Cuenta", 
+            onPress: () => router.push("/CreateCount") // Navega a la vista CreateCount
+          },
         ]
       );
     }
     lastTap = now;
-  }; 
+  };
+  
   
 
   const addTableWithChairs = (xPercent, yPercent) => {
