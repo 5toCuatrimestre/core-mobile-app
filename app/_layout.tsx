@@ -5,8 +5,10 @@ import "../global.css";
 export default function RootLayout() {
   return (
     <StyleContextProvider>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack screenOptions={{
+          headerShown: false, // Oculta la cabecera en todas las pantallas del Stack
+        }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: true }} />
       </Stack>
     </StyleContextProvider>
   );
