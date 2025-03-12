@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { Tabs } from "expo-router";
-import { StyleContext } from "../../utils/StyleContext";
+import { StyleContext } from "../../../utils/StyleContext";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
@@ -20,22 +20,9 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="dashboard"
+        name="areas"
         options={{
-          title: "Solicitudes",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "home-sharp" : "home-outline"}
-              color={color}
-              size={24}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="space"
-        options={{
-          title: "Espacio",
+          title: "Areas",
           tabBarIcon: ({ color, focused }) => (
             <MaterialIcons name="table-restaurant" size={24} color={color} />
           ),

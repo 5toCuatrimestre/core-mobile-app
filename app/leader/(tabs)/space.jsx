@@ -7,7 +7,7 @@ import {
   Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import ChairsModal from "../../components/ChairsModal"; // 🔹 Importamos el modal externo
+import ChairsModal from "../../../components/ChairsModal"; // 🔹 Importamos el modal externo
 import { useRouter } from "expo-router";
 
 export default function Space() {
@@ -16,6 +16,7 @@ export default function Space() {
   const [showModal, setShowModal] = useState(false);
   const [currentItem, setCurrentItem] = useState(null);
   const [chairs, setChairs] = useState("");
+  const [assignedWaiter, setAssignedWaiter] = useState(null); // Nuevo estado para mesero asignado
   const canvasRef = useRef(null);
   const idCounterRef = useRef(1);
   const ALIGNMENT_THRESHOLD = 5;
@@ -34,13 +35,34 @@ export default function Space() {
             text: "Crear Cuenta", 
             onPress: () => router.push("/CreateCount") // Navega a la vista CreateCount
           },
+          {
+            text: "Asignar a Mesero",
+            onPress: () => {
+              Alert.alert(
+                "Asignar Mesa",
+                "¿A qué mesero deseas asignar esta mesa?",
+                [
+                  { text: "Isaac", onPress: () => assignWaiter("Isaac", item.id) },  
+                  { text: "Apaez", onPress: () => assignWaiter("Apaez", item.id) },  
+                  { text: "Daniel", onPress: () => assignWaiter("Daniel", item.id) }, 
+                  { text: "Cancelar", style: "cancel" }
+                ]
+              );
+            }
+          }
         ]
       );
     }
     lastTap = now;
   };
-  
-  
+
+  const assignWaiter = (waiterName, tableId) => {
+    setDroppedItems((prevItems) => 
+      prevItems.map((item) =>
+        item.id === tableId ? { ...item, waiter: waiterName } : item
+      )
+    );
+  };
 
   const addTableWithChairs = (xPercent, yPercent) => {
     setCurrentItem({ id: idCounterRef.current, xPercent, yPercent });
@@ -150,14 +172,13 @@ export default function Space() {
         {/* Ícono de mesa mientras se arrastra dentro del lienzo */}
         {draggingItem && (
           <View
-            style={[
+            style={[ 
               styles.iconWrapper,
               {
                 left: `${draggingItem.xPercent}%`,
                 top: `${draggingItem.yPercent}%`,
               },
-            ]}
-          >
+            ]}>
             <Icon name="table-restaurant" size={30} color="gray" />
           </View>
         )}
@@ -174,15 +195,15 @@ export default function Space() {
           <View
             key={item.id}
             {...getItemPanResponder(item).panHandlers}
-            style={[
-              styles.iconWrapper,
-              { left: `${item.xPercent}%`, top: `${item.yPercent}%` },
-            ]}
-          >
+            style={[styles.iconWrapper, { left: `${item.xPercent}%`, top: `${item.yPercent}%` }]}>
             <View style={styles.table}>
               <Icon name="table-restaurant" size={30} color="white" />
               <View style={{ alignItems: "center", width: "100%" }}>
                 <Text style={styles.chairsText}>{item.chairs}</Text>
+                {/* Mostrar nombre del mesero sin sombreado y por encima de la mesa */}
+                {item.waiter && (
+                  <Text style={styles.waiterText}>{item.waiter}</Text>
+                )}
               </View>
             </View>
           </View>
@@ -224,15 +245,27 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     position: "absolute",
-    bottom: -32, 
+    bottom: -35, 
     alignSelf: "center", 
-    backgroundColor: "rgba(0, 0, 0, 0.6)", 
+    backgroundColor: "rgba(0, 0, 0, 0.7)", 
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 5,
     minWidth: 28, 
     textAlign: "center", 
-  },  
+  },
+  waiterText: {
+    fontSize: 11, // Tamaño más pequeño
+    color: "#ff", // Color dorado
+    fontWeight: "bold",
+    position: "absolute",
+    top: -60, // Ubicación sobre la mesa
+    alignSelf: "center",
+    textAlign: "center",
+    minWidth: 60,
+    paddingHorizontal: 5,
+    letterSpacing: 0.5,
+  },
   table: {
     backgroundColor: "#FF6363",
     padding: 10,

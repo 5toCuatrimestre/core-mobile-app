@@ -1,14 +1,14 @@
 import React, { useContext } from "react";
 import { View, Text, FlatList, TouchableOpacity, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { StyleContext } from "../utils/StyleContext";
+import { StyleContext } from "../../utils/StyleContext";
 
 export default function CancelOrder() {
   const { mesa } = useLocalSearchParams();
   const router = useRouter();
   const { style } = useContext(StyleContext);
 
-  // Lista de productos a cancelar (mostrados con el estilo de los meseros)
+  // Lista de productos a cancelar
   const productos = [
     {
       id: "1",
@@ -42,7 +42,7 @@ export default function CancelOrder() {
         Cancelación de Productos
       </Text>
 
-      {/* Lista de productos (sin interacción) */}
+      {/* Lista de productos */}
       <FlatList
         data={productos}
         keyExtractor={(item) => item.id}
@@ -67,7 +67,7 @@ export default function CancelOrder() {
       <View className="mt-4">
         <TouchableOpacity
           className="p-3 rounded-lg items-center mb-2"
-          onPress={() => router.push("/dashboard")}
+          onPress={() => router.push("/leader/dashboard")} 
           style={{ backgroundColor: style.BgButton }}
         >
           <Text className="font-semibold" style={{ color: style.P }}>Autorizar cancelación</Text>
@@ -75,8 +75,8 @@ export default function CancelOrder() {
 
         <TouchableOpacity
           className="p-3 rounded-lg items-center"
-          onPress={() => router.push("/dashboard")}
-          style={{ backgroundColor: "#E53935" }} // Rojo para denegar
+          onPress={() => router.push("/leader/dashboard")}
+          style={{ backgroundColor: "#E53935" }} 
         >
           <Text className="font-semibold text-white">Denegar cancelación</Text>
         </TouchableOpacity>

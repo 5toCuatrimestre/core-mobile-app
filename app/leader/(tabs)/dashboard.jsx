@@ -1,8 +1,8 @@
 import React, { useState, useContext } from "react";
 import { View, Text, TextInput, FlatList, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { Routes } from "../../utils/routes";
-import { StyleContext } from "../../utils/StyleContext";
+import { Routes } from "../../../utils/routes";
+import { StyleContext } from "../../../utils/StyleContext";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function Dashboard() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => router.push({ pathname: "/CancelOrder", params: { mesa: item.mesa } })}
+            onPress={() => router.push({ pathname: "/leader/CancelOrder", params: { mesa: item.mesa } })}
             className="flex-row items-center p-3 rounded-lg mb-2 shadow-sm"
             style={{ backgroundColor: style.BgCard }}
           >
@@ -57,15 +57,6 @@ export default function Dashboard() {
           </TouchableOpacity>
         )}
       />
-
-      {/* Botón "Ir a espacios" */}
-      <TouchableOpacity
-        className="mt-4 p-3 rounded-lg items-center"
-        onPress={() => router.push(Routes.space)}
-        style={{ backgroundColor: style.BgButton }}
-      >
-        <Text className="font-semibold" style={{ color: style.P }}>Ir a espacios</Text>
-      </TouchableOpacity>
     </View>
   );
 }

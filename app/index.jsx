@@ -15,7 +15,12 @@ export default function AuthScreen() {
 
   const handleLogin = () => {
     console.log("Email:", email, "Password:", password, "Remember:", remember);
-    router.push("/dashboard"); // Redirige tras login
+    if(email=="waiter"){
+      router.push("/waiter"); // Redirige tras login
+    }
+    if(email=="leader"){
+      router.push("/leader"); // Redirige tras login
+    }
   };
 
   return (

@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from "react";
 import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { StyleContext } from "../utils/StyleContext";
+import { StyleContext } from "../../utils/StyleContext";
 import { Alert } from "react-native";
 
 export default function CreateCount() {
@@ -95,54 +95,67 @@ export default function CreateCount() {
         <TouchableOpacity 
           className="absolute right-2 top-2 bg-blue-500 w-8 h-8 rounded-full flex items-center justify-center"
           style={{ backgroundColor: "#1e88e5" }}
-          onPress={() => router.push("/MenuPlatillos")}
+          onPress={() => router.push("/waiter/MenuPlatillos")}
         >
           <Text className="text-white text-xl">+</Text>
           </TouchableOpacity>
       </View>
 
       <ScrollView className="flex-1 mb-4">
-        {productosFiltrados.map((producto) => (
-          <View key={producto.id} className="flex-row justify-between items-center p-3 mb-3 rounded-lg" style={{ backgroundColor: style.BgCard || "#ffffff" }}>
-            <Image source={{ uri: producto.imagen }} className="w-16 h-16 rounded-lg mr-3" />
-            <View className="flex-1">
-              <Text className="text-lg font-semibold" style={{ color: style.H2 || "#333" }}>{producto.nombre}</Text>
-              <Text className="text-sm" style={{ color: style.H3 || "#666" }}>{producto.descripcion}</Text>
-              <View className="flex-row items-center justify-between mt-1">
-                <Text className="text-sm" style={{ color: style.H3 || "#666" }}>{producto.cantidad} platos</Text>
-                <View className="flex-row">
-                  <TouchableOpacity 
-                    onPress={() => disminuirCantidad(producto.id)}
-                    style={{ marginRight: 10 }}
-                  >
+  {productosFiltrados.map((producto) => (
+    <View key={producto.id} className="relative p-3 mb-3 rounded-lg" style={{ backgroundColor: style.BgCard || "#ffffff" }}>
+      
+      {/* Precio en la esquina superior derecha */}
+      <Text className="absolute top-2 right-2 text-base font-semibold" style={{ color: style.H2 || "#333" }}>
+        ${producto.precio.toFixed(2)}
+      </Text>
 
-                    <Text style={{ color: style.H2 || "#333", fontSize: 18 }}>-</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    onPress={() => aumentarCantidad(producto.id)}
-                  >
-                    <Text style={{ color: style.H2 || "#333", fontSize: 18 }}>+</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+      <View className="flex-row justify-between items-center">
+        <Image source={{ uri: producto.imagen }} className="w-16 h-16 rounded-lg mr-3" />
+        <View className="flex-1">
+          <Text className="text-lg font-semibold" style={{ color: style.H2 || "#333" }}>{producto.nombre}</Text>
+          <Text className="text-sm" style={{ color: style.H3 || "#666" }}>{producto.descripcion}</Text>
+
+          <View className="flex-row items-center justify-between mt-1">
+            <Text className="text-sm" style={{ color: style.H3 || "#666" }}>{producto.cantidad} platos</Text>
+            <View className="flex-row">
+              <TouchableOpacity 
+                onPress={() => disminuirCantidad(producto.id)} 
+                style={{ backgroundColor: "#ff4d4d", paddingVertical: 5, paddingHorizontal: 8, borderRadius: 4, marginRight: 5 }}
+              >
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "bold" }}>−</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => aumentarCantidad(producto.id)} 
+                style={{ backgroundColor: "#4CAF50", paddingVertical: 5, paddingHorizontal: 8, borderRadius: 4 }}
+              >
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "bold" }}>+</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        ))}
-      </ScrollView>
+        </View>
+      </View>
+      
+    </View>
+  ))}
+</ScrollView>
 
       <View className="mb-4 p-3 rounded-lg" style={{ backgroundColor: style.BgCard || "#ffffff" }}>
         <Text className="text-lg font-bold" style={{ color: style.H2 || "#333" }}>Total: ${total.toFixed(2)}</Text>
       </View>
 
       <TouchableOpacity
-        className="p-3 rounded-lg items-center"
-        style={{ backgroundColor: "#1e88e5" }}
-        onPress={() => {
-          Alert.alert("Cuenta creada", "La cuenta se ha creado exitosamente.", [{ text: "OK", onPress: () => router.back() }]);
-        }}
-      >
-        <Text className="font-semibold text-white">Terminar</Text>
-      </TouchableOpacity>
+  className="p-3 rounded-lg items-center"
+  style={{ backgroundColor: "#1e88e5" }}
+  onPress={() => {
+    Alert.alert("Cuenta creada", "La cuenta se ha creado exitosamente.", [
+      { text: "OK", onPress: () => router.back() }
+    ]);
+  }}
+>
+  <Text className="font-semibold text-white">Terminar</Text>
+</TouchableOpacity>
+
     </View>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useContext } from "react";
 import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { StyleContext } from "../utils/StyleContext";
+import { StyleContext } from "../../utils/StyleContext";
 
 export default function MenuPlatillos({ onAgregarPlatillo }) {
 const router = useRouter();
