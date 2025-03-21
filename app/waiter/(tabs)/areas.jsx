@@ -17,7 +17,7 @@ export default function Areas() {
     const now = Date.now();
     if (now - lastTap < 300) {
       router.push({
-        pathname: "/waiter/info",
+        pathname: "/waiter/CreateCount",
         params: {
           id: item.id,
           xPercent: item.xPercent,
