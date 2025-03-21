@@ -9,6 +9,8 @@ import {
 import Icon from "react-native-vector-icons/MaterialIcons";
 import ChairsModal from "../../../components/ChairsModal"; // 🔹 Importamos el modal externo
 import { useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+
 
 export default function Space() {
   const [droppedItems, setDroppedItems] = useState([]);
@@ -26,35 +28,18 @@ export default function Space() {
   const handleDoubleClick = (item) => {
     const now = Date.now();
     if (now - lastTap < 300) {
-      Alert.alert(
-        "Información de la Mesa",
-        `🆔 ID: ${item.id}\n📍 X: ${item.xPercent.toFixed(1)}% | Y: ${item.yPercent.toFixed(1)}%\n💺 Lugares: ${item.chairs}`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          { 
-            text: "Crear Cuenta", 
-            onPress: () => router.push("/CreateCount") // Navega a la vista CreateCount
-          },
-          {
-            text: "Asignar a Mesero",
-            onPress: () => {
-              Alert.alert(
-                "Asignar Mesa",
-                "¿A qué mesero deseas asignar esta mesa?",
-                [
-                  { text: "Isaac", onPress: () => assignWaiter("Isaac", item.id) },  
-                  { text: "Apaez", onPress: () => assignWaiter("Apaez", item.id) },  
-                  { text: "Daniel", onPress: () => assignWaiter("Daniel", item.id) }, 
-                  { text: "Cancelar", style: "cancel" }
-                ]
-              );
+        router.push({
+            pathname: "/leader/AssignWaiter",
+            params: {
+                id: item.id,
+                x: item.xPercent.toFixed(1),
+                y: item.yPercent.toFixed(1),
+                chairs: item.chairs
             }
-          }
-        ]
-      );
+        });
     }
     lastTap = now;
-  };
+};
 
   const assignWaiter = (waiterName, tableId) => {
     setDroppedItems((prevItems) => 

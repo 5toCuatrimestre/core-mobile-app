@@ -67,6 +67,7 @@ const agregarPlatillo = (platillo) => {
 
   return (
     <View className="flex-1 p-4" style={{ backgroundColor: style.BgInterface }}>
+      
       {/* Barra de búsqueda */}
       <View className="mb-4 relative">
         <TextInput

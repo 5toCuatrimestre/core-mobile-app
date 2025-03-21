@@ -1,41 +1,30 @@
 import React, { useRef, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  PanResponder,
-  Text,
-  Alert,
-} from "react-native";
+import { View, StyleSheet, PanResponder, Text } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 
-export default function areas() {
-  // Simulando mesas predefinidas (en un caso real vendrían de una API o base de datos)
+export default function Areas() {
   const [droppedItems, setDroppedItems] = useState([
     { id: 1, xPercent: 20, yPercent: 30, chairs: 4 },
     { id: 2, xPercent: 60, yPercent: 30, chairs: 6 },
     { id: 3, xPercent: 40, yPercent: 70, chairs: 2 },
-    // Puedes agregar más mesas predefinidas según sea necesario
   ]);
-  
-  const canvasRef = useRef(null);
+
   const router = useRouter();
   let lastTap = 0;
 
   const handleDoubleClick = (item) => {
     const now = Date.now();
     if (now - lastTap < 300) {
-      Alert.alert(
-        "Información de la Mesa",
-        `🆔 ID: ${item.id}\n📍 X: ${item.xPercent.toFixed(1)}% | Y: ${item.yPercent.toFixed(1)}%\n💺 Lugares: ${item.chairs}`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          { 
-            text: "Crear Cuenta", 
-            onPress: () => router.push("/waiter/CreateCount") // Navega a la vista CreateCount
-          },
-        ]
-      );
+      router.push({
+        pathname: "/waiter/info",
+        params: {
+          id: item.id,
+          xPercent: item.xPercent,
+          yPercent: item.yPercent,
+          chairs: item.chairs,
+        },
+      });
     }
     lastTap = now;
   };
@@ -43,12 +32,6 @@ export default function areas() {
   const getItemPanResponder = (item) =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        // No hacemos nada al iniciar el toque, solo detectamos para el doble clic
-      },
-      onPanResponderMove: () => {
-        // Las mesas ya no se pueden mover, así que no hacemos nada aquí
-      },
       onPanResponderRelease: () => {
         handleDoubleClick(item);
       },
@@ -56,8 +39,7 @@ export default function areas() {
 
   return (
     <View style={styles.container}>
-      <View ref={canvasRef} style={styles.canvas}>
-        {/* Mesas en el lienzo (ahora solo visualización) */}
+      <View style={styles.canvas}>
         {droppedItems.map((item) => (
           <View
             key={item.id}
@@ -69,9 +51,7 @@ export default function areas() {
           >
             <View style={styles.table}>
               <Icon name="table-restaurant" size={30} color="white" />
-              <View style={{ alignItems: "center", width: "100%" }}>
-                <Text style={styles.chairsText}>{item.chairs}</Text>
-              </View>
+              <Text style={styles.chairsText}>{item.chairs}</Text>
             </View>
           </View>
         ))}
@@ -80,7 +60,6 @@ export default function areas() {
   );
 }
 
-// Estilos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -100,19 +79,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   chairsText: {
-    fontSize: 12, 
+    fontSize: 12,
     color: "white",
     fontWeight: "bold",
     position: "absolute",
-    bottom: -32, 
-    alignSelf: "center", 
-    backgroundColor: "rgba(0, 0, 0, 0.6)", 
+    bottom: -32,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 5,
-    minWidth: 28, 
-    textAlign: "center", 
-  },  
+    minWidth: 28,
+    textAlign: "center",
+  },
   table: {
     backgroundColor: "#FF6363",
     padding: 10,
@@ -123,3 +101,4 @@ const styles = StyleSheet.create({
     height: 50,
   },
 });
+
