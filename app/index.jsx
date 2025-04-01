@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
+import { login } from "../api/authApi";
 
 import { Checkbox } from "react-native-paper";
 import { StyleContext } from "../utils/StyleContext";
@@ -13,13 +14,21 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
 
-  const handleLogin = () => {
-    console.log("Email:", email, "Password:", password, "Remember:", remember);
-    if(email=="waiter"){
-      router.push("/waiter"); // Redirige tras login
-    }
-    if(email=="leader"){
-      router.push("/leader"); // Redirige tras login
+  const handleLogin = async () => {
+    try {
+      console.log("Email:", email, "Password:", password, "Remember:", remember);
+      const credentials = { email, password }; // Las credenciales que se pasan al login
+      const result = await login(credentials); // Llamas a la función login
+      console.log("Login result:", result);
+  
+      if (email == "waiter") {
+        router.push("/waiter"); // Redirige tras login
+      } else if (email == "leader") {
+        router.push("/leader"); // Redirige tras login
+      }
+    } catch (error) {
+      console.log("Error al iniciar sesión:", error);
+      // Maneja el error aquí, tal vez mostrando un mensaje de error al usuario
     }
   };
 
