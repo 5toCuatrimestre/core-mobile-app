@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 export default function AssignWaiter() {
@@ -14,26 +14,24 @@ export default function AssignWaiter() {
     ]);
 
     const [selectedWaiter, setSelectedWaiter] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
 
     const handleAssign = (waiter) => {
         setSelectedWaiter(waiter);
+        setModalVisible(true);
 
-        router.replace({
-            pathname: previousScreen || "/leader/Space",
-            params: { tableId, waiter: waiter.name }
-        });
+        setTimeout(() => {
+            setModalVisible(false);
+            router.replace({
+                pathname: previousScreen || "/leader/Space",
+                params: { tableId, waiter: waiter.name }
+            });
+        }, 3000);
     };
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Selecciona un Mesero</Text>
-            
-            {selectedWaiter && (
-                <View style={styles.overlay}>
-                    <Text style={styles.overlayText}>Mesero: {selectedWaiter.name}</Text>
-                </View>
-            )}
-
             <FlatList
                 data={waiters}
                 keyExtractor={(item) => item.id.toString()}
@@ -50,6 +48,19 @@ export default function AssignWaiter() {
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                 <Text style={styles.backText}>Volver</Text>
             </TouchableOpacity>
+
+            {/* Modal de Notificación */}
+            <Modal
+                transparent={true}
+                visible={modalVisible}
+                animationType="fade"
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalText}>Mesero asignado: {selectedWaiter?.name}</Text>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -74,14 +85,17 @@ const styles = StyleSheet.create({
         alignItems: "center"
     },
     backText: { color: "white", fontSize: 16 },
-    overlay: {
-        position: "absolute",
-        top: 10,
-        left: "50%",
-        transform: [{ translateX: -50 }],
-        backgroundColor: "rgba(0, 0, 0, 0.7)",
-        padding: 10,
-        borderRadius: 10,
+    modalContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "rgba(0, 0, 0, 0.5)"
     },
-    overlayText: { color: "white", fontSize: 16, fontWeight: "bold" }
+    modalContent: {
+        backgroundColor: "white",
+        padding: 20,
+        borderRadius: 10,
+        alignItems: "center"
+    },
+    modalText: { fontSize: 18, fontWeight: "bold", color: "black" }
 });
