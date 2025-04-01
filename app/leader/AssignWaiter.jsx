@@ -13,10 +13,10 @@ export default function AssignWaiter() {
         { id: 4, name: "Ana" },
     ]);
 
-    const [selectedWaiterId, setSelectedWaiterId] = useState(null);
+    const [selectedWaiter, setSelectedWaiter] = useState(null);
 
     const handleAssign = (waiter) => {
-        setSelectedWaiterId(waiter.id);
+        setSelectedWaiter(waiter);
 
         router.replace({
             pathname: previousScreen || "/leader/Space",
@@ -27,15 +27,19 @@ export default function AssignWaiter() {
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Selecciona un Mesero</Text>
+            
+            {selectedWaiter && (
+                <View style={styles.overlay}>
+                    <Text style={styles.overlayText}>Mesero: {selectedWaiter.name}</Text>
+                </View>
+            )}
+
             <FlatList
                 data={waiters}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                     <TouchableOpacity 
-                        style={[
-                            styles.item, 
-                            selectedWaiterId === item.id && styles.selectedItem
-                        ]}
+                        style={[styles.item, selectedWaiter?.id === item.id && styles.selectedItem]}
                         onPress={() => handleAssign(item)}
                     >
                         <Text style={styles.waiterName}>{item.name}</Text>
@@ -69,5 +73,15 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         alignItems: "center"
     },
-    backText: { color: "white", fontSize: 16 }
+    backText: { color: "white", fontSize: 16 },
+    overlay: {
+        position: "absolute",
+        top: 10,
+        left: "50%",
+        transform: [{ translateX: -50 }],
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        padding: 10,
+        borderRadius: 10,
+    },
+    overlayText: { color: "white", fontSize: 16, fontWeight: "bold" }
 });

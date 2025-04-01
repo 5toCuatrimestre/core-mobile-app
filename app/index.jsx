@@ -21,9 +21,9 @@ export default function AuthScreen() {
       const result = await login(credentials); // Llamas a la función login
       console.log("Login result:", result);
   
-      if (email == "waiter") {
+      if (result.rol == "WAITER") {
         router.push("/waiter"); // Redirige tras login
-      } else if (email == "leader") {
+      } else if (result.rol == "LEADER") {
         router.push("/leader"); // Redirige tras login
       }
     } catch (error) {

@@ -1,7 +1,7 @@
 export const baseURL = "http://localhost:8080";
 export async function login(credentials) {
     try {
-      const response = await fetch("http://localhost:8080/core/auth/login", {
+      const response = await fetch("http://192.168.105.240:8080/core/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
