@@ -1,58 +1,59 @@
-import React, { useState, useContext } from "react";
-import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet } from "react-native";
+import React, { useState, useContext, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
+import { getMenu } from "../../api/services/menuService";
 
 export default function MenuPlatillos({ onAgregarPlatillo }) {
-const router = useRouter();
-const { style } = useContext(StyleContext);
-const [searchQuery, setSearchQuery] = useState("");
-  // Lista de platillos disponibles en el menú
-const [platillos, setPlatillos] = useState([
-    {   
-        id: "101", 
-        nombre: "Enchiladas Verdes", 
-        precio: 85, 
-        descripcion: "Deliciosas enchiladas con salsa verde, crema y queso.", 
-        imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" 
-    },
-    { 
-        id: "102", 
-        nombre: "Tacos de Pastor", 
-        precio: 65, 
-        descripcion: "Tacos de pastor con piña, cebolla y cilantro.", 
-        imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" 
-    },
-    { 
-        id: "103", 
-        nombre: "Pozole", 
-        precio: 90, 
-        descripcion: "Tradicional pozole rojo con guarniciones.", 
-        imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" 
-    },
-    { 
-      id: "104", 
-      nombre: "Quesadillas", 
-      precio: 55, 
-      descripcion: "Quesadillas de queso con hongos o flor de calabaza.", 
-      imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" 
-    },
-    { 
-      id: "105", 
-      nombre: "Chiles Rellenos", 
-      precio: 95, 
-      descripcion: "Chiles poblanos rellenos de queso, bañados en salsa de tomate.", 
-      imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" 
-    },
-  ]);
+  const router = useRouter();
+  const { style } = useContext(StyleContext);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [platillos, setPlatillos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const cargarMenu = async () => {
+      try {
+        setLoading(true);
+        const response = await getMenu(1); // Obtener el menú con ID 1
+        
+        if (response && response.result && response.result.products) {
+          // Transformar los productos del menú al formato esperado
+          const productosFormateados = response.result.products.map(producto => ({
+            id: producto.productId.toString(),
+            nombre: producto.name,
+            precio: producto.price,
+            descripcion: producto.description,
+            imagen: producto.multimedia && producto.multimedia.length > 0 
+              ? producto.multimedia[0].url 
+              : "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" // Imagen por defecto
+          }));
+          
+          setPlatillos(productosFormateados);
+          console.log("Productos cargados:", productosFormateados.length);
+        } else {
+          console.error("Formato de respuesta inesperado:", response);
+          setError("No se pudieron cargar los platillos");
+        }
+      } catch (err) {
+        console.error("Error al cargar el menú:", err);
+        setError("Error al cargar el menú");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarMenu();
+  }, []);
 
   // Filtrar platillos según la búsqueda
   const platillosFiltrados = platillos.filter((platillo) =>
     platillo.nombre.toLowerCase().includes(searchQuery.toLowerCase())
-);
+  );
 
   // Función para agregar platillo a la cuenta
-const agregarPlatillo = (platillo) => {
+  const agregarPlatillo = (platillo) => {
     // Navegar de regreso y pasar el platillo seleccionado
     router.back();
     // Utilizar parámetros para pasar el platillo seleccionado
@@ -97,50 +98,74 @@ const agregarPlatillo = (platillo) => {
         </Text>
       </View>
 
-      {/* Lista de platillos disponibles */}
-      <ScrollView className="flex-1 mb-4">
-        {platillosFiltrados.map((platillo) => (
-          <View 
-            key={platillo.id}
-            className="flex-row justify-between items-center p-3 mb-3 rounded-lg"
-            style={{ backgroundColor: style.BgCard || "#ffffff" }}
+      {/* Estado de carga o error */}
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#1e88e5" />
+          <Text className="mt-2" style={{ color: style.H3 || "#666" }}>Cargando platillos...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 justify-center items-center">
+          <Text style={{ color: "red" }}>{error}</Text>
+          <TouchableOpacity
+            className="mt-4 p-2 rounded-lg"
+            style={{ backgroundColor: "#1e88e5" }}
+            onPress={() => window.location.reload()}
           >
-            <View className="flex-row items-center flex-1">
-              <Image
-                source={{ uri: platillo.imagen }}
-                className="w-16 h-16 rounded-lg mr-3"
-              />
-              <View className="flex-1">
-                <View className="flex-row justify-between">
-                  <Text className="text-lg font-semibold" style={{ color: style.H2 || "#333" }}>
-                    {platillo.nombre}
-                  </Text>
-                  <Text className="text-lg font-semibold" style={{ color: style.H2 || "#333" }}>
-                    ${platillo.precio}
-                  </Text>
+            <Text className="text-white">Intentar de nuevo</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        /* Lista de platillos disponibles */
+        <ScrollView className="flex-1 mb-4">
+          {platillosFiltrados.length > 0 ? (
+            platillosFiltrados.map((platillo) => (
+              <View 
+                key={platillo.id}
+                className="flex-row justify-between items-center p-3 mb-3 rounded-lg"
+                style={{ backgroundColor: style.BgCard || "#ffffff" }}
+              >
+                <View className="flex-row items-center flex-1">
+                  <Image
+                    source={{ uri: platillo.imagen }}
+                    className="w-16 h-16 rounded-lg mr-3"
+                  />
+                  <View className="flex-1">
+                    <View className="flex-row justify-between">
+                      <Text className="text-lg font-semibold" style={{ color: style.H2 || "#333" }}>
+                        {platillo.nombre}
+                      </Text>
+                      <Text className="text-lg font-semibold" style={{ color: style.H2 || "#333" }}>
+                        ${platillo.precio}
+                      </Text>
+                    </View>
+                    <Text className="text-sm" style={{ color: style.H3 || "#666" }}>
+                      {platillo.descripcion}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => agregarPlatillo(platillo)}
+                      className="mt-2 px-3 py-1 rounded-lg self-end"
+                      style={{ backgroundColor: "#1e88e5" }}
+                    >
+                      <Text className="text-white font-semibold">Agregar</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <Text className="text-sm" style={{ color: style.H3 || "#666" }}>
-                  {platillo.descripcion}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => agregarPlatillo(platillo)}
-                  className="mt-2 px-3 py-1 rounded-lg self-end"
-                  style={{ backgroundColor: "#1e88e5" }}
-                >
-                  <Text className="text-white font-semibold">Agregar</Text>
-                </TouchableOpacity>
               </View>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+            ))
+          ) : (
+            <Text className="text-center my-4" style={{ color: style.H3 || "#666" }}>
+              No se encontraron platillos que coincidan con la búsqueda
+            </Text>
+          )}
+        </ScrollView>
+      )}
 
       <TouchableOpacity
         className="p-3 rounded-lg items-center"
         style={{ backgroundColor: "#1e88e5" }}
         onPress={() => router.back()}
       >
-
         <Text className="font-semibold text-white">Volver a la cuenta</Text>
       </TouchableOpacity>
     </View>
