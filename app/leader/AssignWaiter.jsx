@@ -13,7 +13,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { getAvailableWaiters, assignWaiterToTable } from "../../api/services/waiterService";
-import { getTableUser, getUserDetails, assignUserToTable } from "../../api/services/tableService";
+import { getTableUser, getUserDetails, assignUserToTable, updateTableUser } from "../../api/services/tableService";
 
 export default function AssignWaiter() {
   const router = useRouter();
@@ -45,7 +45,9 @@ export default function AssignWaiter() {
       try {
         const tableUserResponse = await getTableUser(params.tableId);
         if (tableUserResponse && tableUserResponse.result && tableUserResponse.result.length > 0) {
+          // Guardar el objeto completo de la asignación, incluyendo el ID
           setTableUser(tableUserResponse.result[0]);
+          console.log("Usuario asignado a la mesa:", tableUserResponse.result[0]);
           
           // Obtener detalles del usuario
           const userDetailsResponse = await getUserDetails(tableUserResponse.result[0].userId);
@@ -93,22 +95,42 @@ export default function AssignWaiter() {
     try {
       setIsAssigning(true);
       
-      // Usar un ID fijo para pruebas
-      const userId = 9; // ID fijo para pruebas
+      // Usar el userId del mesero en lugar de id
+      const userId = waiter.userId;
       
-      console.log(`Asignando mesero con ID fijo ${userId} a la mesa ${params.tableId}`);
+      if (!userId) {
+        throw new Error("El mesero seleccionado no tiene un ID válido");
+      }
       
-      // Asignar mesero a la mesa
-      const response = await assignWaiterToTable(params.tableId, userId);
+      console.log(`Asignando mesero con ID ${userId} a la mesa ${params.tableId}`);
       
-      if (response && response.type === "SUCCESS") {
-        Alert.alert(
-          "Éxito",
-          `Mesero ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
-          [{ text: "OK", onPress: () => router.back() }]
-        );
+      // Si ya hay un usuario asignado, actualizar en lugar de crear uno nuevo
+      if (tableUser && tableUser.id) {
+        console.log(`Actualizando asignación existente con ID ${tableUser.id}`);
+        const response = await updateTableUser(tableUser.id, 1, params.tableId, userId);
+        
+        if (response && response.type === "SUCCESS") {
+          Alert.alert(
+            "Éxito",
+            `Mesero ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
+            [{ text: "OK", onPress: () => router.back() }]
+          );
+        } else {
+          throw new Error("Error al actualizar el mesero asignado a la mesa");
+        }
       } else {
-        throw new Error("Error al asignar el mesero a la mesa");
+        // Asignar mesero a la mesa (crear nueva asignación)
+        const response = await assignWaiterToTable(params.tableId, userId);
+        
+        if (response && response.type === "SUCCESS") {
+          Alert.alert(
+            "Éxito",
+            `Mesero ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
+            [{ text: "OK", onPress: () => router.back() }]
+          );
+        } else {
+          throw new Error("Error al asignar el mesero a la mesa");
+        }
       }
     } catch (error) {
       console.error("Error al asignar mesero:", error);
@@ -123,22 +145,42 @@ export default function AssignWaiter() {
     try {
       setIsAssigning(true);
       
-      // Usar un ID fijo para pruebas
-      const userId = 9; // ID fijo para pruebas
+      // Usar el userId del usuario en lugar de id
+      const userId = waiter.userId;
       
-      console.log(`Asignando usuario con ID fijo ${userId} a la mesa ${params.tableId}`);
+      if (!userId) {
+        throw new Error("El usuario seleccionado no tiene un ID válido");
+      }
       
-      // Asignar usuario a la mesa (usando routeId=1 como ejemplo)
-      const response = await assignUserToTable(1, params.tableId, userId);
+      console.log(`Asignando usuario con ID ${userId} a la mesa ${params.tableId}`);
       
-      if (response && response.type === "SUCCESS") {
-        Alert.alert(
-          "Éxito",
-          `Usuario ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
-          [{ text: "OK", onPress: () => router.back() }]
-        );
+      // Si ya hay un usuario asignado, actualizar en lugar de crear uno nuevo
+      if (tableUser && tableUser.id) {
+        console.log(`Actualizando asignación existente con ID ${tableUser.id}`);
+        const response = await updateTableUser(tableUser.id, 1, params.tableId, userId);
+        
+        if (response && response.type === "SUCCESS") {
+          Alert.alert(
+            "Éxito",
+            `Usuario ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
+            [{ text: "OK", onPress: () => router.back() }]
+          );
+        } else {
+          throw new Error("Error al actualizar el usuario asignado a la mesa");
+        }
       } else {
-        throw new Error("Error al asignar el usuario a la mesa");
+        // Asignar usuario a la mesa (usando routeId=1 como ejemplo)
+        const response = await assignUserToTable(1, params.tableId, userId);
+        
+        if (response && response.type === "SUCCESS") {
+          Alert.alert(
+            "Éxito",
+            `Usuario ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
+            [{ text: "OK", onPress: () => router.back() }]
+          );
+        } else {
+          throw new Error("Error al asignar el usuario a la mesa");
+        }
       }
     } catch (error) {
       console.error("Error al asignar usuario:", error);

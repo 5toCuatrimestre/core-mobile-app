@@ -318,3 +318,71 @@ export const assignUserToTable = async (routeId, positionSiteId, userId) => {
     throw error;
   }
 };
+
+// Actualizar usuario asignado a una mesa
+export const updateTableUser = async (assignmentId, routeId, positionSiteId, userId) => {
+  try {
+    // Obtener el token de autenticación
+    const token = await getAuthToken();
+    
+    if (!token) {
+      throw new Error("No se pudo obtener el token de autenticación");
+    }
+    
+    // Crear el cuerpo de la solicitud
+    const requestBody = {
+      routeId: routeId,
+      positionSiteId: positionSiteId,
+      userId: userId,
+      createdAt: new Date().toISOString()
+    };
+    
+    console.log("Actualizando asignación de usuario a mesa:", {
+      assignmentId,
+      requestBody
+    });
+    
+    // Realizar la solicitud PUT
+    const response = await fetch(`${baseURL}/route-position-site-user/${assignmentId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log("Respuesta del servidor (status):", response.status);
+    
+    // Obtener el texto de la respuesta
+    const responseText = await response.text();
+    console.log("Respuesta completa del servidor:", responseText);
+    
+    // Verificar si la respuesta es exitosa
+    if (!response.ok) {
+      throw new Error(`Error al actualizar usuario: ${response.status} - ${responseText}`);
+    }
+    
+    // Intentar parsear la respuesta como JSON
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+      console.log("Respuesta parseada:", data);
+      
+      // Verificar si la respuesta tiene el formato esperado
+      if (data.type === "SUCCESS" && data.result) {
+        console.log("Asignación actualizada correctamente:", data.result);
+      } else {
+        console.warn("Respuesta inesperada:", data);
+      }
+    } catch (parseError) {
+      console.error("Error al parsear la respuesta como JSON:", parseError);
+      throw new Error(`Error al parsear la respuesta: ${parseError.message}. Respuesta: ${responseText}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error en updateTableUser:", error);
+    throw error;
+  }
+};
