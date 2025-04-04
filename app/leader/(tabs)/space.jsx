@@ -13,7 +13,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import ChairsModal from "../../../components/ChairsModal"; // 🔹 Importamos el modal externo
 import { useRouter } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
-import { getAllTables, createTable, updateTable } from "../../../api/services/tableService"; // Importamos el servicio de mesas
+import { getAllTables, createTable, updateTable, getTableUser, getUserDetails } from "../../../api/services/tableService"; // Importamos el servicio de mesas
 import { useFocusEffect } from "expo-router";
 
 // Constantes para el sistema de coordenadas
@@ -43,6 +43,8 @@ export default function Space() {
   const lastUpdateTime = useRef(0);
   const canvasDimensions = useRef({ width: 0, height: 0 });
   const params = useLocalSearchParams();
+  const [tableUsers, setTableUsers] = useState({});
+  const [userDetails, setUserDetails] = useState({});
 
   // Función para convertir coordenadas de la cuadrícula virtual a píxeles
   const gridToPixels = (gridX, gridY) => {
@@ -129,6 +131,9 @@ export default function Space() {
         }
         
         setDroppedItems(serverTables);
+        
+        // Cargar usuarios asignados a las mesas
+        await loadTableUsers(serverTables);
       } else {
         throw new Error("Formato de respuesta inválido");
       }
@@ -140,10 +145,36 @@ export default function Space() {
     }
   };
 
-  // Cargamos las mesas al montar el componente
-  useEffect(() => {
-    loadTablesFromServer();
-  }, []);
+  // Función para cargar los usuarios asignados a las mesas
+  const loadTableUsers = async (tables) => {
+    try {
+      const tableUsersData = {};
+      const userDetailsData = {};
+      
+      for (const table of tables) {
+        try {
+          const tableUserResponse = await getTableUser(table.id);
+          if (tableUserResponse && tableUserResponse.result && tableUserResponse.result.length > 0) {
+            const tableUser = tableUserResponse.result[0];
+            tableUsersData[table.id] = tableUser;
+            
+            // Obtener detalles del usuario
+            const userDetailsResponse = await getUserDetails(tableUser.userId);
+            if (userDetailsResponse && userDetailsResponse.result) {
+              userDetailsData[tableUser.userId] = userDetailsResponse.result;
+            }
+          }
+        } catch (error) {
+          console.error(`Error al cargar usuario para la mesa ${table.id}:`, error);
+        }
+      }
+      
+      setTableUsers(tableUsersData);
+      setUserDetails(userDetailsData);
+    } catch (error) {
+      console.error("Error al cargar usuarios de las mesas:", error);
+    }
+  };
 
   // Actualizamos las dimensiones del canvas cuando cambia el tamaño de la pantalla
   useEffect(() => {
@@ -456,6 +487,16 @@ export default function Space() {
     }
   }, [params.waiter, params.tableId]);
 
+  // Función para obtener el nombre del usuario asignado a una mesa
+  const getUserNameForTable = (tableId) => {
+    const tableUser = tableUsers[tableId];
+    if (tableUser && userDetails[tableUser.userId]) {
+      const user = userDetails[tableUser.userId];
+      return `${user.name}`;
+    }
+    return null;
+  };
+
   return (
     <View style={styles.container}>
       <View ref={canvasRef} style={styles.canvas}>
@@ -523,6 +564,10 @@ export default function Space() {
                 {/* Mostrar nombre del mesero si está asignado */}
                 {item.waiter && (
                   <Text style={styles.waiterText}>{item.waiter}</Text>
+                )}
+                {/* Mostrar nombre del usuario si está asignado */}
+                {getUserNameForTable(item.id) && (
+                  <Text style={styles.userText}>{getUserNameForTable(item.id)}</Text>
                 )}
               </View>
             </View>
@@ -592,6 +637,18 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     position: "absolute",
     top: -60, // Ubicación sobre la mesa
+    alignSelf: "center",
+    textAlign: "center",
+    minWidth: 60,
+    paddingHorizontal: 5,
+    letterSpacing: 0.5,
+  },
+  userText: {
+    fontSize: 11,
+    color: "#0049ff",
+    fontWeight: "bold",
+    position: "absolute",
+    top: -60,
     alignSelf: "center",
     textAlign: "center",
     minWidth: 60,

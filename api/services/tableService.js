@@ -158,3 +158,163 @@ export async function updateTable(tableId, tableData) {
     throw error;  // Relanza el error para manejo posterior
   }
 }
+
+// Función para verificar si hay un usuario asociado a una mesa
+export const getTableUser = async (positionSiteId) => {
+  try {
+    // Obtener el token de autenticación
+    const token = await getAuthToken();
+    
+    // Verificar si existe un token válido
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+    
+    console.log(`Realizando petición a: ${baseURL}/route-position-site-user/position-site/${positionSiteId}`);
+    console.log(`Token: ${token.substring(0, 10)}...`);
+    
+    const response = await fetch(`${baseURL}/route-position-site-user/position-site/${positionSiteId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    console.log(`Estado de la respuesta: ${response.status} ${response.statusText}`);
+    
+    // Obtener el texto de la respuesta
+    const responseText = await response.text();
+    console.log("Respuesta completa (texto):", responseText);
+    
+    // Intentar analizar como JSON solo si hay contenido
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+        console.log("Respuesta analizada como JSON:", data);
+      } catch (parseError) {
+        console.error("Error al analizar JSON:", parseError);
+        throw new Error(`Error al analizar JSON: ${parseError.message}. Respuesta: ${responseText}`);
+      }
+    } else {
+      console.log("La respuesta está vacía");
+      data = { result: [] };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error al obtener el usuario de la mesa:", error);
+    throw error;
+  }
+};
+
+// Función para obtener los detalles de un usuario
+export const getUserDetails = async (userId) => {
+  try {
+    // Obtener el token de autenticación
+    const token = await getAuthToken();
+    
+    // Verificar si existe un token válido
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+    
+    console.log(`Realizando petición a: ${baseURL}/user/${userId}`);
+    
+    const response = await fetch(`${baseURL}/user/${userId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    console.log(`Estado de la respuesta: ${response.status} ${response.statusText}`);
+    
+    // Obtener el texto de la respuesta
+    const responseText = await response.text();
+    console.log("Respuesta completa (texto):", responseText);
+    
+    // Intentar analizar como JSON solo si hay contenido
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+        console.log("Respuesta analizada como JSON:", data);
+      } catch (parseError) {
+        console.error("Error al analizar JSON:", parseError);
+        throw new Error(`Error al analizar JSON: ${parseError.message}. Respuesta: ${responseText}`);
+      }
+    } else {
+      console.log("La respuesta está vacía");
+      data = { result: null };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error al obtener los detalles del usuario:", error);
+    throw error;
+  }
+};
+
+// Función para asignar un usuario a una mesa
+export const assignUserToTable = async (routeId, positionSiteId, userId) => {
+  try {
+    // Obtener el token de autenticación
+    const token = await getAuthToken();
+    
+    // Verificar si existe un token válido
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+    
+    const currentDate = new Date().toISOString();
+    const requestBody = {
+      routeId,
+      positionSiteId,
+      userId,
+      createdAt: currentDate,
+      updatedAt: currentDate,
+      deletedAt: null
+    };
+    
+    console.log(`Realizando petición POST a: ${baseURL}/route-position-site-user`);
+    console.log("Cuerpo de la petición:", JSON.stringify(requestBody));
+    
+    const response = await fetch(`${baseURL}/route-position-site-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    console.log(`Estado de la respuesta: ${response.status} ${response.statusText}`);
+    
+    // Obtener el texto de la respuesta
+    const responseText = await response.text();
+    console.log("Respuesta completa (texto):", responseText);
+    
+    // Intentar analizar como JSON solo si hay contenido
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+        console.log("Respuesta analizada como JSON:", data);
+      } catch (parseError) {
+        console.error("Error al analizar JSON:", parseError);
+        throw new Error(`Error al analizar JSON: ${parseError.message}. Respuesta: ${responseText}`);
+      }
+    } else {
+      console.log("La respuesta está vacía");
+      data = { type: "SUCCESS" };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error al asignar usuario a la mesa:", error);
+    throw error;
+  }
+};

@@ -1,264 +1,467 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Modal,
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
   ActivityIndicator,
-  Alert
+  Alert,
+  FlatList,
+  RefreshControl,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { getWaiters, assignWaiterToTable } from "../../api/services/waiterService";
+import { getAvailableWaiters, assignWaiterToTable } from "../../api/services/waiterService";
+import { getTableUser, getUserDetails, assignUserToTable } from "../../api/services/tableService";
 
 export default function AssignWaiter() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const navigation = useNavigation();
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: "Asignar mesero" });
-  }, []); 
-  
-  const { tableId, chairs, x, y, currentWaiter, previousScreen } = params;
-  
   const [waiters, setWaiters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedWaiter, setSelectedWaiter] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [assigning, setAssigning] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [tableUser, setTableUser] = useState(null);
+  const [userDetails, setUserDetails] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Cargar meseros disponibles
-  useEffect(() => {
-    loadWaiters();
-  }, []);
-
-  const loadWaiters = async () => {
+  // Cargar meseros disponibles y verificar si hay un usuario asignado
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getWaiters();
       
-      if (response && response.type === "SUCCESS" && Array.isArray(response.result)) {
-        setWaiters(response.result);
+      // Cargar meseros disponibles
+      const waitersResponse = await getAvailableWaiters();
+      if (waitersResponse && waitersResponse.result) {
+        setWaiters(waitersResponse.result);
       } else {
-        throw new Error("Formato de respuesta inválido");
+        throw new Error("No se pudieron cargar los meseros disponibles");
+      }
+      
+      // Verificar si hay un usuario asignado a la mesa
+      try {
+        const tableUserResponse = await getTableUser(params.tableId);
+        if (tableUserResponse && tableUserResponse.result && tableUserResponse.result.length > 0) {
+          setTableUser(tableUserResponse.result[0]);
+          
+          // Obtener detalles del usuario
+          const userDetailsResponse = await getUserDetails(tableUserResponse.result[0].userId);
+          if (userDetailsResponse && userDetailsResponse.result) {
+            setUserDetails(userDetailsResponse.result);
+          }
+        } else {
+          // No hay usuario asignado, establecer tableUser como null
+          setTableUser(null);
+          setUserDetails(null);
+        }
+      } catch (error) {
+        console.log("No hay usuario asignado a esta mesa:", error);
+        // No es un error, simplemente no hay usuario asignado
+        setTableUser(null);
+        setUserDetails(null);
       }
     } catch (error) {
-      console.error("Error al cargar meseros:", error);
-      setError("Error al cargar meseros. Por favor, inténtalo de nuevo.");
+      console.error("Error al cargar datos:", error);
+      setError("Error al cargar los datos. Por favor, inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAssign = async (waiter) => {
+  useEffect(() => {
+    loadData();
+  }, [params.tableId]);
+
+  // Función para actualizar los datos
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  // Filtrar meseros según la búsqueda
+  const filteredWaiters = waiters.filter((waiter) =>
+    waiter.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    waiter.lastName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Asignar mesero a la mesa
+  const handleAssignWaiter = async (waiter) => {
     try {
-      setAssigning(true);
-      setSelectedWaiter(waiter);
+      setIsAssigning(true);
+      
+      // Usar un ID fijo para pruebas
+      const userId = 9; // ID fijo para pruebas
+      
+      console.log(`Asignando mesero con ID fijo ${userId} a la mesa ${params.tableId}`);
       
       // Asignar mesero a la mesa
-      const response = await assignWaiterToTable(tableId, waiter.userId);
+      const response = await assignWaiterToTable(params.tableId, userId);
       
       if (response && response.type === "SUCCESS") {
-        setModalVisible(true);
-        
-        // Esperar 2 segundos antes de volver a la pantalla anterior
-        setTimeout(() => {
-          setModalVisible(false);
-          router.replace({
-            pathname: previousScreen || "/leader/(tabs)/space",
-            params: { 
-              tableId, 
-              waiter: waiter.name,
-              waiterEmail: waiter.email
-            }
-          });
-        }, 2000);
+        Alert.alert(
+          "Éxito",
+          `Mesero ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
+          [{ text: "OK", onPress: () => router.back() }]
+        );
       } else {
-        throw new Error("Error al asignar mesero");
+        throw new Error("Error al asignar el mesero a la mesa");
       }
     } catch (error) {
       console.error("Error al asignar mesero:", error);
-      Alert.alert(
-        "Error",
-        "No se pudo asignar el mesero. Por favor, inténtalo de nuevo.",
-        [{ text: "OK" }]
-      );
+      Alert.alert("Error", "No se pudo asignar el mesero a la mesa. Por favor, inténtalo de nuevo.");
     } finally {
-      setAssigning(false);
+      setIsAssigning(false);
     }
   };
 
+  // Asignar usuario a la mesa
+  const handleAssignUser = async (waiter) => {
+    try {
+      setIsAssigning(true);
+      
+      // Usar un ID fijo para pruebas
+      const userId = 9; // ID fijo para pruebas
+      
+      console.log(`Asignando usuario con ID fijo ${userId} a la mesa ${params.tableId}`);
+      
+      // Asignar usuario a la mesa (usando routeId=1 como ejemplo)
+      const response = await assignUserToTable(1, params.tableId, userId);
+      
+      if (response && response.type === "SUCCESS") {
+        Alert.alert(
+          "Éxito",
+          `Usuario ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
+          [{ text: "OK", onPress: () => router.back() }]
+        );
+      } else {
+        throw new Error("Error al asignar el usuario a la mesa");
+      }
+    } catch (error) {
+      console.error("Error al asignar usuario:", error);
+      Alert.alert("Error", "No se pudo asignar el usuario a la mesa. Por favor, inténtalo de nuevo.");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  // Renderizar un elemento de mesero
+  const renderWaiterItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.waiterItem}
+      onPress={() => handleAssignWaiter(item)}
+      disabled={isAssigning}
+    >
+      <View style={styles.waiterInfo}>
+        <Text style={styles.waiterName}>
+          {item.name} {item.lastName}
+        </Text>
+        <Text style={styles.waiterEmail}>{item.email}</Text>
+      </View>
+      <Icon name="person-add" size={24} color="#FF6363" />
+    </TouchableOpacity>
+  );
+
+  // Renderizar un mensaje cuando no hay resultados
+  const renderEmptyList = () => (
+    <View style={styles.emptyContainer}>
+      <Icon name="search-off" size={48} color="#ccc" />
+      <Text style={styles.emptyText}>
+        No se encontraron meseros con ese nombre.
+      </Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Selecciona un Mesero</Text>
-      
+
+      <View style={styles.tableInfo}>
+        <Text style={styles.tableInfoText}>
+          Mesa #{params.tableId} - {params.chairs} sillas
+        </Text>
+        <Text style={styles.coordinatesText}>
+          Posición: ({params.x}, {params.y})
+        </Text>
+      </View>
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FF6363" />
-          <Text style={styles.loadingText}>Cargando meseros...</Text>
+          <Text style={styles.loadingText}>Cargando meseros disponibles...</Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadWaiters}>
-            <Text style={styles.retryText}>Reintentar</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.retryButtonText}>Volver</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={waiters}
-          keyExtractor={(item) => item.userId.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={[styles.item, selectedWaiter?.userId === item.userId && styles.selectedItem]}
-              onPress={() => handleAssign(item)}
-              disabled={assigning}
-            >
-              <View style={styles.waiterInfo}>
-                <Text style={styles.waiterName}>{item.name} {item.lastName}</Text>
-                <Text style={styles.waiterEmail}>{item.email}</Text>
+        <>
+          {/* Información del usuario asignado */}
+          {tableUser ? (
+            <View style={styles.userInfoContainer}>
+              <Text style={styles.userInfoTitle}>Usuario Asignado</Text>
+              <View style={styles.userInfoCard}>
+                <Text style={styles.userName}>
+                  {userDetails ? `${userDetails.name} ${userDetails.lastName}` : "Cargando..."}
+                </Text>
+                <Text style={styles.userEmail}>
+                  {userDetails ? userDetails.email : ""}
+                </Text>
+                <TouchableOpacity
+                  style={styles.changeUserButton}
+                  onPress={() => setTableUser(null)}
+                >
+                  <Text style={styles.changeUserButtonText}>Cambiar Usuario</Text>
+                </TouchableOpacity>
               </View>
-              {assigning && selectedWaiter?.userId === item.userId && (
-                <ActivityIndicator size="small" color="white" />
-              )}
-            </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.userInfoContainer}>
+              <Text style={styles.userInfoTitle}>Asignar Usuario</Text>
+              <View style={styles.userInfoCard}>
+                <Text style={styles.noUserText}>
+                  No hay usuario asignado a esta mesa.
+                </Text>
+              </View>
+            </View>
           )}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No hay meseros disponibles</Text>
-          }
-        />
-      )}
 
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backText}>Volver</Text>
-      </TouchableOpacity>
-
-      {/* Modal de Notificación */}
-      <Modal
-        transparent={true}
-        visible={modalVisible}
-        animationType="fade"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Icon name="check-circle" size={50} color="#27AE60" />
-            <Text style={styles.modalText}>Mesero asignado: {selectedWaiter?.name}</Text>
+          {/* Buscador */}
+          <View style={styles.searchContainer}>
+            <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar mesero..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
-        </View>
-      </Modal>
+
+          {/* Lista de meseros */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Meseros Disponibles</Text>
+            {waiters.length > 0 ? (
+              <FlatList
+                data={filteredWaiters}
+                renderItem={renderWaiterItem}
+                keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
+                ListEmptyComponent={renderEmptyList}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={["#FF6363"]}
+                  />
+                }
+                contentContainerStyle={styles.listContent}
+              />
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Icon name="people" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>
+                  No hay meseros disponibles en este momento.
+                </Text>
+              </View>
+            )}
+          </View>
+        </>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 20, 
-    backgroundColor: "#fff" 
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
   },
-  title: { 
-    fontSize: 22, 
-    fontWeight: "bold", 
-    textAlign: "center", 
-    marginBottom: 20 
-  },
-  item: {
-    padding: 15,
-    marginVertical: 5,
-    backgroundColor: "#FF6363",
-    borderRadius: 10,
+  header: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    alignItems: "center"
-  },
-  selectedItem: { 
-    backgroundColor: "#27AE60" 
-  },
-  waiterInfo: {
-    flex: 1
-  },
-  waiterName: { 
-    fontSize: 18, 
-    color: "white", 
-    fontWeight: "bold" 
-  },
-  waiterEmail: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
-    marginTop: 2
+    paddingHorizontal: 16,
+    paddingTop: 60,
+    paddingBottom: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
   },
   backButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: "#555",
-    borderRadius: 10,
-    alignItems: "center"
+    padding: 8,
   },
-  backText: { 
-    color: "white", 
-    fontSize: 16 
+  title: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)"
+  tableInfo: {
+    padding: 16,
+    backgroundColor: "#fff",
+    marginBottom: 8,
   },
-  modalContent: {
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    width: "80%"
+  tableInfoText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
   },
-  modalText: { 
-    fontSize: 18, 
-    fontWeight: "bold", 
-    color: "black",
-    marginTop: 10,
-    textAlign: "center"
+  coordinatesText: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center"
+    alignItems: "center",
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    color: "#333"
+    color: "#666",
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20
+    padding: 16,
   },
   errorText: {
     fontSize: 16,
     color: "#FF0000",
     textAlign: "center",
-    marginBottom: 10
+    marginBottom: 16,
   },
   retryButton: {
-    padding: 10,
-    backgroundColor: "#3B82F6",
-    borderRadius: 5
+    backgroundColor: "#FF6363",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  retryText: {
-    color: "white",
-    fontSize: 14
+  retryButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  sectionContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 8,
+  },
+  listContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+  waiterItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  waiterInfo: {
+    flex: 1,
+  },
+  waiterName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  waiterEmail: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
   },
   emptyText: {
-    textAlign: "center",
     fontSize: 16,
     color: "#666",
-    marginTop: 20
-  }
+    textAlign: "center",
+    marginTop: 16,
+  },
+  userInfoContainer: {
+    padding: 16,
+    backgroundColor: "#fff",
+    marginBottom: 8,
+  },
+  userInfoTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 8,
+  },
+  userInfoCard: {
+    backgroundColor: "#f9f9f9",
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  userEmail: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
+  },
+  noUserText: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 16,
+  },
+  changeUserButton: {
+    backgroundColor: "#FF6363",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 16,
+    alignSelf: "flex-start",
+  },
+  changeUserButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
 });
