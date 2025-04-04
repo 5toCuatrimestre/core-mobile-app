@@ -1,12 +1,18 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useLayoutEffect } from "react";
 import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
 import { Alert } from "react-native";
 
 export default function CreateCount() {
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: "Crear cuenta" });
+  }, [navigation]);
+    
   const { style } = useContext(StyleContext);
   const [searchQuery, setSearchQuery] = useState("");
 

@@ -1,12 +1,29 @@
-import React, { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal } from "react-native";
+import React, { useState, useEffect, useLayoutEffect } from "react";
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Modal,
+  ActivityIndicator
+} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/MaterialIcons";
 
 export default function AssignWaiter() {
-    const router = useRouter();
-    const { tableId, previousScreen } = useLocalSearchParams();
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const navigation = useNavigation();
 
-    const [waiters, setWaiters] = useState([
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: "Asignar mesero" });
+  }, []); 
+  
+  const { tableId, chairs, x, y, currentWaiter, previousScreen } = params;
+  
+  const [waiters, setWaiters] = useState([
         { id: 1, name: "Juan" },
         { id: 2, name: "Maria" },
         { id: 3, name: "Carlos" },
