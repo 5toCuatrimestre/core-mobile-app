@@ -6,12 +6,18 @@ import {
   Text,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import ChairsModal from "../../../components/ChairsModal"; // 🔹 Importamos el modal externo
 import { useRouter } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
 import { getAllTables, createTable, updateTable } from "../../../api/services/tableService"; // Importamos el servicio de mesas
+import { useFocusEffect } from "expo-router";
+
+// Constantes para el sistema de coordenadas
+const GRID_SIZE = 100; // Tamaño de la cuadrícula virtual (100x100)
+const ALIGNMENT_THRESHOLD = 5; // Umbral de alineación en píxeles
 
 export default function Space() {
   const [droppedItems, setDroppedItems] = useState([]);
@@ -29,7 +35,44 @@ export default function Space() {
   const ALIGNMENT_THRESHOLD = 5;
   const router = useRouter();
   let lastTap = 0;
-  let lastUpdateTime = 0; // Para controlar la frecuencia de actualizaciones
+  const lastUpdateTime = useRef(0);
+  const canvasDimensions = useRef({ width: 0, height: 0 });
+
+  // Función para convertir coordenadas de la cuadrícula virtual a píxeles
+  const gridToPixels = (gridX, gridY) => {
+    return {
+      x: (gridX / GRID_SIZE) * canvasDimensions.current.width,
+      y: (gridY / GRID_SIZE) * canvasDimensions.current.height
+    };
+  };
+
+  // Función para convertir coordenadas de píxeles a la cuadrícula virtual
+  const pixelsToGrid = (pixelX, pixelY) => {
+    return {
+      x: Math.round((pixelX / canvasDimensions.current.width) * GRID_SIZE),
+      y: Math.round((pixelY / canvasDimensions.current.height) * GRID_SIZE)
+    };
+  };
+
+  // Función para normalizar coordenadas negativas
+  const normalizeCoordinates = (gridX, gridY) => {
+    let normalizedX = gridX;
+    let normalizedY = gridY;
+    
+    // Ajustamos coordenadas negativas
+    if (normalizedX < 0) {
+      normalizedX = 10; // Posición inicial en el lado izquierdo
+    }
+    if (normalizedY < 0) {
+      normalizedY = 10; // Posición inicial en la parte superior
+    }
+    
+    // Aseguramos que las coordenadas no excedan el tamaño de la cuadrícula
+    normalizedX = Math.min(normalizedX, GRID_SIZE - 10);
+    normalizedY = Math.min(normalizedY, GRID_SIZE - 10);
+    
+    return { x: normalizedX, y: normalizedY };
+  };
 
   // Función para cargar las mesas desde el servidor
   const loadTablesFromServer = async () => {
@@ -41,14 +84,36 @@ export default function Space() {
       // Verificamos si la respuesta tiene el formato esperado
       if (response && response.result && Array.isArray(response.result)) {
         // Transformamos los datos del servidor al formato que espera nuestro componente
-        const serverTables = response.result.map(table => ({
-          id: table.positionSiteId,
-          xPercent: table.xlocation * 100, // Convertimos de decimal a porcentaje
-          yPercent: table.ylocation * 100, // Convertimos de decimal a porcentaje
-          chairs: table.capacity,
-          waiter: table.waiter || null, // Si existe un mesero asignado
-          status: table.status
-        }));
+        const serverTables = response.result.map((table, index) => {
+          // Convertimos de decimal a coordenadas de cuadrícula
+          // No normalizamos aquí para mantener las coordenadas exactas del servidor
+          const gridX = table.xlocation * GRID_SIZE;
+          const gridY = table.ylocation * GRID_SIZE;
+          
+          // Si las coordenadas originales son negativas, distribuimos las mesas en el canvas
+          if (table.xlocation < 0 || table.ylocation < 0) {
+            // Distribuimos las mesas en una cuadrícula 2x2
+            const row = Math.floor(index / 2);
+            const col = index % 2;
+            return {
+              id: table.positionSiteId,
+              gridX: 20 + (col * 30), // 20, 50
+              gridY: 20 + (row * 30), // 20, 50
+              chairs: table.capacity,
+              waiter: table.waiter || null, // Si existe un mesero asignado
+              status: table.status
+            };
+          }
+          
+          return {
+            id: table.positionSiteId,
+            gridX: gridX,
+            gridY: gridY,
+            chairs: table.capacity,
+            waiter: table.waiter || null, // Si existe un mesero asignado
+            status: table.status
+          };
+        });
         
         // Actualizamos el contador de IDs para que no haya conflictos
         if (serverTables.length > 0) {
@@ -61,7 +126,7 @@ export default function Space() {
       }
     } catch (error) {
       console.error("Error al cargar las mesas:", error);
-      setError("No se pudieron cargar las mesas. Por favor, inténtalo de nuevo.");
+      setError("Error al cargar las mesas. Por favor, inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -72,6 +137,36 @@ export default function Space() {
     loadTablesFromServer();
   }, []);
 
+  // Recargamos las mesas cada vez que el usuario regresa a esta pantalla
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("Pantalla de espacio enfocada, recargando mesas...");
+      loadTablesFromServer();
+    }, [])
+  );
+
+  // Actualizamos las dimensiones del canvas cuando cambia el tamaño de la pantalla
+  useEffect(() => {
+    const updateCanvasDimensions = () => {
+      if (canvasRef.current) {
+        canvasRef.current.measure((fx, fy, width, height, px, py) => {
+          canvasDimensions.current = { width, height };
+        });
+      }
+    };
+
+    // Actualizamos las dimensiones inicialmente
+    updateCanvasDimensions();
+
+    // Suscribimos a cambios en el tamaño de la ventana
+    const subscription = Dimensions.addEventListener('change', updateCanvasDimensions);
+
+    // Limpiamos la suscripción al desmontar
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   const handleDoubleClick = (item) => {
     const now = Date.now();
     if (now - lastTap < 300) {
@@ -79,8 +174,8 @@ export default function Space() {
             pathname: "/leader/AssignWaiter",
             params: {
                 id: item.id,
-                x: item.xPercent.toFixed(1),
-                y: item.yPercent.toFixed(1),
+                x: item.gridX.toFixed(1),
+                y: item.gridY.toFixed(1),
                 chairs: item.chairs
             }
         });
@@ -96,68 +191,70 @@ export default function Space() {
     );
   };
 
-  const addTableWithChairs = (xPercent, yPercent) => {
-    setCurrentItem({ id: idCounterRef.current, xPercent, yPercent });
+  const addTableWithChairs = async (gridX, gridY) => {
+    setIsCreating(true);
     setShowModal(true);
-  };
-
-  const confirmTable = async () => {
-    if (!chairs || isNaN(chairs) || chairs <= 0) {
-      Alert.alert("Error", "Ingresa una cantidad válida de sillas.");
-      return;
-    }
-
-    try {
-      setIsCreating(true);
-      
-      // Convertimos las coordenadas de porcentaje a decimal (0-1)
-      const xlocation = currentItem.xPercent / 100;
-      const ylocation = currentItem.yPercent / 100;
-      
-      // Creamos la mesa en el servidor
-      const response = await createTable({
-        capacity: parseInt(chairs),
-        xlocation,
-        ylocation
-      });
-      
-      // Si la creación fue exitosa, actualizamos el estado local
-      if (response && response.result) {
-        const newTable = {
-          id: response.result.positionSiteId,
-          xPercent: currentItem.xPercent,
-          yPercent: currentItem.yPercent,
-          chairs: parseInt(chairs),
-          status: response.result.status
-        };
+    
+    // Guardamos las coordenadas para usarlas cuando se confirme la mesa
+    const tempCoords = { gridX, gridY };
+    
+    // Función para confirmar la creación de la mesa
+    const confirmTable = async () => {
+      try {
+        // Convertimos las coordenadas de la cuadrícula a decimales (0-1) para el servidor
+        // Aseguramos que las coordenadas estén dentro del rango 0-1
+        const xlocation = Math.max(0, Math.min(1, tempCoords.gridX / GRID_SIZE));
+        const ylocation = Math.max(0, Math.min(1, tempCoords.gridY / GRID_SIZE));
         
-        setDroppedItems((prevItems) => [...prevItems, newTable]);
+        console.log(`Creando mesa en coordenadas: (${xlocation}, ${ylocation})`);
         
-        // Actualizamos el contador de IDs
-        idCounterRef.current = Math.max(idCounterRef.current, response.result.positionSiteId) + 1;
+        // Creamos la mesa en el servidor
+        const response = await createTable({
+          capacity: chairs,
+          xlocation,
+          ylocation
+        });
         
-        // Cerramos el modal y limpiamos el estado
+        // Si la creación fue exitosa, añadimos la mesa al estado local
+        if (response && response.result) {
+          const newTable = {
+            id: response.result.positionSiteId,
+            gridX: tempCoords.gridX,
+            gridY: tempCoords.gridY,
+            chairs: chairs,
+            waiter: null,
+            status: true
+          };
+          
+          setDroppedItems((prevItems) => [...prevItems, newTable]);
+        } else {
+          throw new Error("Error al crear la mesa en el servidor");
+        }
+      } catch (error) {
+        console.error("Error al crear la mesa:", error);
+        setError("Error al crear la mesa. Por favor, inténtalo de nuevo.");
+      } finally {
         setShowModal(false);
-        setChairs("");
-      } else {
-        throw new Error("Error al crear la mesa en el servidor");
+        setIsCreating(false);
       }
-    } catch (error) {
-      console.error("Error al crear la mesa:", error);
-      Alert.alert("Error", "No se pudo crear la mesa. Por favor, inténtalo de nuevo.");
-    } finally {
-      setIsCreating(false);
-    }
+    };
+    
+    // Guardamos la función de confirmación para usarla cuando se cierre el modal
+    window.confirmTable = confirmTable;
   };
 
   // Función para actualizar la posición de una mesa en el servidor
-  const updateTablePosition = async (tableId, xPercent, yPercent, chairs) => {
+  const updateTablePosition = async (tableId, gridX, gridY, chairs) => {
     try {
-      // Convertimos las coordenadas de porcentaje a decimal (0-1)
-      const xlocation = xPercent / 100;
-      const ylocation = yPercent / 100;
+      setIsUpdating(true);
       
-      // Actualizamos la mesa en el servidor
+      // Convertimos las coordenadas de la cuadrícula a decimales (0-1) para el servidor
+      // Aseguramos que las coordenadas estén dentro del rango 0-1
+      const xlocation = Math.max(0, Math.min(1, gridX / GRID_SIZE));
+      const ylocation = Math.max(0, Math.min(1, gridY / GRID_SIZE));
+      
+      console.log(`Actualizando mesa ${tableId} a coordenadas: (${xlocation}, ${ylocation})`);
+      
       const response = await updateTable(tableId, {
         capacity: chairs,
         xlocation,
@@ -174,6 +271,8 @@ export default function Space() {
     } catch (error) {
       console.error("Error al actualizar la mesa:", error);
       return false;
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -182,24 +281,20 @@ export default function Space() {
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
-          const xPercent = ((gesture.moveX - px) / width) * 100;
-          const yPercent = ((gesture.moveY - py) / height) * 100;
-          setDraggingItem({ xPercent, yPercent });
+          // Convertimos las coordenadas de píxeles a la cuadrícula virtual
+          const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
+          setDraggingItem({ gridX: gridCoords.x, gridY: gridCoords.y });
         });
       },
       onPanResponderRelease: (_, gesture) => {
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
-          let xPercent = ((gesture.moveX - px) / width) * 100;
-          let yPercent = ((gesture.moveY - py) / height) * 100;
-
-          if (
-            xPercent >= 0 &&
-            xPercent <= 100 &&
-            yPercent >= 0 &&
-            yPercent <= 100
-          ) {
-            addTableWithChairs(xPercent, yPercent);
-          }
+          // Convertimos las coordenadas de píxeles a la cuadrícula virtual
+          const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
+          
+          // Aseguramos que las coordenadas estén dentro del rango de la cuadrícula
+          const normalizedCoords = normalizeCoordinates(gridCoords.x, gridCoords.y);
+          
+          addTableWithChairs(normalizedCoords.x, normalizedCoords.y);
         });
 
         setDraggingItem(null);
@@ -212,19 +307,24 @@ export default function Space() {
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gesture) => {
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
-          let xPercent = ((gesture.moveX - px) / width) * 100;
-          let yPercent = ((gesture.moveY - py) / height) * 100;
+          // Convertimos las coordenadas de píxeles a la cuadrícula virtual
+          const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
+          
+          // Aseguramos que las coordenadas estén dentro del rango de la cuadrícula
+          const normalizedCoords = normalizeCoordinates(gridCoords.x, gridCoords.y);
+          
           const alignedPosition = getAlignedPosition(
-            { xPercent, yPercent },
+            { gridX: normalizedCoords.x, gridY: normalizedCoords.y },
             item.id
           );
+          
           setDroppedItems((prevItems) =>
             prevItems.map((prevItem) =>
               prevItem.id === item.id
                 ? {
                     ...prevItem,
-                    xPercent: alignedPosition.x,
-                    yPercent: alignedPosition.y,
+                    gridX: alignedPosition.gridX,
+                    gridY: alignedPosition.gridY,
                   }
                 : prevItem
             )
@@ -234,19 +334,24 @@ export default function Space() {
       onPanResponderRelease: (_, gesture) => {
         // Obtenemos la posición final de la mesa
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
-          let xPercent = ((gesture.moveX - px) / width) * 100;
-          let yPercent = ((gesture.moveY - py) / height) * 100;
+          // Convertimos las coordenadas de píxeles a la cuadrícula virtual
+          const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
+          
+          // Aseguramos que las coordenadas estén dentro del rango de la cuadrícula
+          const normalizedCoords = normalizeCoordinates(gridCoords.x, gridCoords.y);
+          
           const alignedPosition = getAlignedPosition(
-            { xPercent, yPercent },
+            { gridX: normalizedCoords.x, gridY: normalizedCoords.y },
             item.id
           );
           
           // Actualizamos la mesa en el servidor
           const now = Date.now();
           // Limitamos la frecuencia de actualizaciones a una cada 500ms
-          if (now - lastUpdateTime > 500) {
-            lastUpdateTime = now;
-            updateTablePosition(item.id, alignedPosition.x, alignedPosition.y, item.chairs);
+          if (now - lastUpdateTime.current > 500) {
+            lastUpdateTime.current = now;
+            console.log(`Guardando mesa ${item.id} en coordenadas: (${alignedPosition.gridX}, ${alignedPosition.gridY})`);
+            updateTablePosition(item.id, alignedPosition.gridX, alignedPosition.gridY, item.chairs);
           }
         });
         
@@ -256,22 +361,22 @@ export default function Space() {
     });
 
   const getAlignedPosition = (current, movingId = null) => {
-    let alignedX = current.xPercent;
-    let alignedY = current.yPercent;
+    let alignedGridX = current.gridX;
+    let alignedGridY = current.gridY;
 
     droppedItems.forEach((item) => {
       if (movingId !== null && item.id === movingId) return;
 
-      if (Math.abs(item.yPercent - current.yPercent) <= ALIGNMENT_THRESHOLD) {
-        alignedY = item.yPercent;
+      if (Math.abs(item.gridY - current.gridY) <= ALIGNMENT_THRESHOLD) {
+        alignedGridY = item.gridY;
       }
 
-      if (Math.abs(item.xPercent - current.xPercent) <= ALIGNMENT_THRESHOLD) {
-        alignedX = item.xPercent;
+      if (Math.abs(item.gridX - current.gridX) <= ALIGNMENT_THRESHOLD) {
+        alignedGridX = item.gridX;
       }
     });
 
-    return { x: alignedX, y: alignedY };
+    return { gridX: alignedGridX, gridY: alignedGridY };
   };
 
   return (
@@ -301,8 +406,8 @@ export default function Space() {
             style={[ 
               styles.iconWrapper,
               {
-                left: `${draggingItem.xPercent}%`,
-                top: `${draggingItem.yPercent}%`,
+                left: gridToPixels(draggingItem.gridX, draggingItem.gridY).x,
+                top: gridToPixels(draggingItem.gridX, draggingItem.gridY).y,
               },
             ]}>
             <Icon name="table-restaurant" size={30} color="gray" />
@@ -321,7 +426,13 @@ export default function Space() {
           <View
             key={item.id}
             {...getItemPanResponder(item).panHandlers}
-            style={[styles.iconWrapper, { left: `${item.xPercent}%`, top: `${item.yPercent}%` }]}>
+            style={[
+              styles.iconWrapper, 
+              { 
+                left: gridToPixels(item.gridX, item.gridY).x, 
+                top: gridToPixels(item.gridX, item.gridY).y 
+              }
+            ]}>
             <View style={[styles.table, item.status ? styles.activeTable : styles.inactiveTable]}>
               <Icon name="table-restaurant" size={30} color="white" />
               <View style={{ alignItems: "center", width: "100%" }}>
@@ -341,7 +452,7 @@ export default function Space() {
         visible={showModal}
         chairs={chairs}
         setChairs={setChairs}
-        confirmTable={confirmTable}
+        confirmTable={window.confirmTable}
         isCreating={isCreating}
       />
     </View>
