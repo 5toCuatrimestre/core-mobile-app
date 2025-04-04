@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  TouchableOpacity,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import ChairsModal from "../../../components/ChairsModal"; // 🔹 Importamos el modal externo
@@ -34,9 +35,14 @@ export default function Space() {
   const idCounterRef = useRef(1);
   const ALIGNMENT_THRESHOLD = 5;
   const router = useRouter();
-  let lastTap = 0;
+  const [lastTap, setLastTap] = useState(0);
+  const [isMoving, setIsMoving] = useState(false);
+  const [selectedTableId, setSelectedTableId] = useState(null);
+  const [longPressTimer, setLongPressTimer] = useState(null);
+  const [isDoubleTapMode, setIsDoubleTapMode] = useState(false);
   const lastUpdateTime = useRef(0);
   const canvasDimensions = useRef({ width: 0, height: 0 });
+  const params = useLocalSearchParams();
 
   // Función para convertir coordenadas de la cuadrícula virtual a píxeles
   const gridToPixels = (gridX, gridY) => {
@@ -101,6 +107,7 @@ export default function Space() {
               gridY: 20 + (row * 30), // 20, 50
               chairs: table.capacity,
               waiter: table.waiter || null, // Si existe un mesero asignado
+              waiterEmail: table.waiterEmail || null, // Si existe un email de mesero asignado
               status: table.status
             };
           }
@@ -111,6 +118,7 @@ export default function Space() {
             gridY: gridY,
             chairs: table.capacity,
             waiter: table.waiter || null, // Si existe un mesero asignado
+            waiterEmail: table.waiterEmail || null, // Si existe un email de mesero asignado
             status: table.status
           };
         });
@@ -137,14 +145,6 @@ export default function Space() {
     loadTablesFromServer();
   }, []);
 
-  // Recargamos las mesas cada vez que el usuario regresa a esta pantalla
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log("Pantalla de espacio enfocada, recargando mesas...");
-      loadTablesFromServer();
-    }, [])
-  );
-
   // Actualizamos las dimensiones del canvas cuando cambia el tamaño de la pantalla
   useEffect(() => {
     const updateCanvasDimensions = () => {
@@ -167,21 +167,45 @@ export default function Space() {
     };
   }, []);
 
-  const handleDoubleClick = (item) => {
+  const handleSingleTap = (item) => {
     const now = Date.now();
     if (now - lastTap < 300) {
-        router.push({
-            pathname: "/leader/AssignWaiter",
-            params: {
-                id: item.id,
-                x: item.gridX.toFixed(1),
-                y: item.gridY.toFixed(1),
-                chairs: item.chairs
-            }
-        });
+      // Doble clic detectado - activamos el modo de movimiento
+      setIsDoubleTapMode(true);
+      setLastTap(0); // Reiniciamos para el siguiente ciclo
+    } else {
+      // Clic simple - abrimos la pantalla de asignación
+      router.push({
+        pathname: "/leader/AssignWaiter",
+        params: {
+          tableId: item.id,
+          x: item.gridX.toFixed(1),
+          y: item.gridY.toFixed(1),
+          chairs: item.chairs,
+          currentWaiter: item.waiter,
+          previousScreen: "/leader/(tabs)/space"
+        }
+      });
     }
-    lastTap = now;
-};
+    setLastTap(now);
+  };
+
+  const handlePressIn = (item) => {
+    // Iniciamos un temporizador para detectar un clic mantenido
+    const timer = setTimeout(() => {
+      handleLongPress(item);
+    }, 500); // 500ms para considerar un clic mantenido
+    
+    setLongPressTimer(timer);
+  };
+
+  const handlePressOut = () => {
+    // Cancelamos el temporizador si el usuario suelta antes de los 500ms
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
 
   const assignWaiter = (waiterName, tableId) => {
     setDroppedItems((prevItems) => 
@@ -302,10 +326,34 @@ export default function Space() {
     })
   ).current;
 
+  const handleTableSelect = (item) => {
+    setSelectedTableId(item.id);
+  };
+
+  const handleDetailsPress = (item) => {
+    router.push({
+      pathname: "/leader/AssignWaiter",
+      params: {
+        tableId: item.id,
+        x: item.gridX.toFixed(1),
+        y: item.gridY.toFixed(1),
+        chairs: item.chairs,
+        currentWaiter: item.waiter,
+        previousScreen: "/leader/(tabs)/space"
+      }
+    });
+  };
+
   const getItemPanResponder = (item) =>
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => selectedTableId === item.id,
+      onMoveShouldSetPanResponder: () => selectedTableId === item.id,
+      onPanResponderGrant: () => {
+        setIsMoving(true);
+      },
       onPanResponderMove: (_, gesture) => {
+        if (selectedTableId !== item.id) return;
+        
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
           // Convertimos las coordenadas de píxeles a la cuadrícula virtual
           const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
@@ -332,6 +380,8 @@ export default function Space() {
         });
       },
       onPanResponderRelease: (_, gesture) => {
+        if (selectedTableId !== item.id) return;
+        
         // Obtenemos la posición final de la mesa
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
           // Convertimos las coordenadas de píxeles a la cuadrícula virtual
@@ -355,8 +405,10 @@ export default function Space() {
           }
         });
         
-        // Manejamos el doble clic para asignar mesero
-        handleDoubleClick(item);
+        // Desactivamos el modo de movimiento después de soltar
+        setTimeout(() => {
+          setIsMoving(false);
+        }, 300);
       },
     });
 
@@ -378,6 +430,31 @@ export default function Space() {
 
     return { gridX: alignedGridX, gridY: alignedGridY };
   };
+
+  // Recargamos las mesas cada vez que el usuario regresa a esta pantalla
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("Pantalla de espacio enfocada, recargando mesas...");
+      loadTablesFromServer();
+    }, [])
+  );
+
+  // Actualizamos el estado local cuando se asigna un mesero
+  useEffect(() => {
+    if (params.waiter && params.tableId) {
+      setDroppedItems(prevItems => 
+        prevItems.map(item => 
+          item.id === parseInt(params.tableId) 
+            ? { 
+                ...item, 
+                waiter: params.waiter,
+                waiterEmail: params.waiterEmail
+              } 
+            : item
+        )
+      );
+    }
+  }, [params.waiter, params.tableId]);
 
   return (
     <View style={styles.container}>
@@ -432,17 +509,34 @@ export default function Space() {
                 left: gridToPixels(item.gridX, item.gridY).x, 
                 top: gridToPixels(item.gridX, item.gridY).y 
               }
+            ]}
+            onTouchEnd={() => handleTableSelect(item)}
+          >
+            <View style={[
+              styles.table, 
+              item.status ? styles.activeTable : styles.inactiveTable,
+              selectedTableId === item.id && styles.selectedTable
             ]}>
-            <View style={[styles.table, item.status ? styles.activeTable : styles.inactiveTable]}>
               <Icon name="table-restaurant" size={30} color="white" />
               <View style={{ alignItems: "center", width: "100%" }}>
                 <Text style={styles.chairsText}>{item.chairs}</Text>
-                {/* Mostrar nombre del mesero sin sombreado y por encima de la mesa */}
+                {/* Mostrar nombre del mesero si está asignado */}
                 {item.waiter && (
                   <Text style={styles.waiterText}>{item.waiter}</Text>
                 )}
               </View>
             </View>
+            
+            {/* Botón de detalles */}
+            {selectedTableId === item.id && (
+              <TouchableOpacity 
+                style={styles.detailsButton}
+                onPress={() => handleDetailsPress(item)}
+              >
+                <Icon name="info" size={20} color="white" />
+                <Text style={styles.detailsButtonText}>Detalles</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ))}
       </View>
@@ -568,5 +662,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#3B82F6",
     textDecorationLine: "underline",
+  },
+  selectedTable: {
+    borderWidth: 3,
+    borderColor: "#3B82F6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  detailsButton: {
+    position: "absolute",
+    top: -50,
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+    minWidth: 100,
+    left: -25,
+  },
+  detailsButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    marginLeft: 5,
+    fontSize: 14,
   },
 });
