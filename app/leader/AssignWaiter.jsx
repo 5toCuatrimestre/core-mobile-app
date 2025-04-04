@@ -252,17 +252,11 @@ export default function AssignWaiter() {
               <Text style={styles.userInfoTitle}>Usuario Asignado</Text>
               <View style={styles.userInfoCard}>
                 <Text style={styles.userName}>
-                  {userDetails ? `${userDetails.name} ${userDetails.lastName}` : "Cargando..."}
+                  {userDetails ? userDetails.name : "Cargando..."}
                 </Text>
                 <Text style={styles.userEmail}>
                   {userDetails ? userDetails.email : ""}
                 </Text>
-                <TouchableOpacity
-                  style={styles.changeUserButton}
-                  onPress={() => setTableUser(null)}
-                >
-                  <Text style={styles.changeUserButtonText}>Cambiar Usuario</Text>
-                </TouchableOpacity>
               </View>
             </View>
           ) : (
