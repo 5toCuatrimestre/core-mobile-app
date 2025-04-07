@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Modal, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { View, Modal, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from "react-native";
 import { createTable } from "../api/services/tableService";
 
 const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gridX, gridY, onTableCreated }) => {
@@ -11,6 +11,23 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
       return;
     }
 
+    // Verificar si contiene comas o puntos decimales
+    if (chairs.includes(',') || chairs.includes('.')) {
+      Alert.alert("Error", "El número de sillas debe ser un número entero");
+      return;
+    }
+
+    const numChairs = parseInt(chairs, 10);
+    if (numChairs <= 0) {
+      Alert.alert("Error", "El número de sillas debe ser mayor que cero");
+      return;
+    }
+
+    if (numChairs > 20) {
+      Alert.alert("Error", "El número máximo de sillas permitido es 20");
+      return;
+    }
+
     setIsCreating(true);
     try {
       // Convertimos las coordenadas de la cuadrícula a decimales (0-1) para el servidor
@@ -19,7 +36,7 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
       
       console.log("ChairsModal: Creando mesa con datos", { 
         name: `Mesa ${positionSiteId}`,
-        capacity: parseInt(chairs, 10),
+        capacity: numChairs,
         xlocation,
         ylocation,
         positionSiteId
@@ -28,7 +45,7 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
       // Creamos la mesa en el servidor
       const response = await createTable({
         name: `Mesa ${positionSiteId}`,
-        capacity: parseInt(chairs, 10),
+        capacity: numChairs,
         xlocation,
         ylocation,
         positionSiteId
@@ -74,9 +91,13 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
           <TextInput
             style={styles.input}
             placeholder="Número de sillas"
-            keyboardType="numeric"
+            keyboardType="number-pad"
             value={chairs}
-            onChangeText={setChairs}
+            onChangeText={(text) => {
+              // Solo permitir números enteros
+              const filteredText = text.replace(/[^0-9]/g, '');
+              setChairs(filteredText);
+            }}
             editable={!isCreating}
           />
           {isCreating ? (
@@ -86,8 +107,18 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
             </View>
           ) : (
             <View style={styles.buttonContainer}>
-              <Button title="Confirmar" onPress={handleConfirm} />
-              <Button title="Cancelar" onPress={onCancel} color="red" />
+              <TouchableOpacity 
+                style={[styles.button, styles.cancelButton]} 
+                onPress={onCancel}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.button, styles.confirmButton]} 
+                onPress={handleConfirm}
+              >
+                <Text style={styles.buttonText}>Confirmar</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -139,7 +170,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
-    marginTop: 10,
+    marginTop: 20,
+    paddingHorizontal: 10,
+  },
+  button: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#FF6363",
+  },
+  confirmButton: {
+    backgroundColor: "#4CAF50",
+  },
+  buttonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
 
