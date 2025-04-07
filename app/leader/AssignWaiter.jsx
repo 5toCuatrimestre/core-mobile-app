@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useContext } from "react";
 import { 
   View, 
   Text, 
@@ -7,17 +7,26 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  FlatList, 
+  FlatList,   
   RefreshControl,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { getAvailableWaiters, assignWaiterToTable } from "../../api/services/waiterService";
 import { getTableUser, getUserDetails, assignUserToTable, updateTableUser } from "../../api/services/tableService";
+import { StyleContext } from "../../utils/StyleContext";
 
 export default function AssignWaiter() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { tableId, chairs, x, y, currentWaiter, previousScreen } = params;
+  const { style } = useContext(StyleContext);
+
+  // Configurar el título del header
+  useLayoutEffect(() => {
+    router.setParams({ title: "Asignar mesero" });
+  }, []);
+
   const [waiters, setWaiters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -193,131 +202,138 @@ export default function AssignWaiter() {
   // Renderizar un elemento de mesero
   const renderWaiterItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.waiterItem}
+      style={[styles.waiterItem, { backgroundColor: style.BgCard, borderColor: style.H3 }]}
       onPress={() => handleAssignWaiter(item)}
       disabled={isAssigning}
     >
       <View style={styles.waiterInfo}>
-        <Text style={styles.waiterName}>
-          {item.name} {item.lastName}
+        <Text style={[styles.waiterName, { color: style.H1 }]}>
+          {item.name}
         </Text>
-        <Text style={styles.waiterEmail}>{item.email}</Text>
+        <Text style={[styles.waiterEmail, { color: style.H3 }]}>{item.email}</Text>
       </View>
-      <Icon name="person-add" size={24} color="#FF6363" />
+      <Icon name="person-add" size={24} color={style.H1} />
     </TouchableOpacity>
   );
 
   // Renderizar un mensaje cuando no hay resultados
   const renderEmptyList = () => (
     <View style={styles.emptyContainer}>
-      <Icon name="search-off" size={48} color="#ccc" />
-      <Text style={styles.emptyText}>
+      <Icon name="search-off" size={48} color={style.H3} />
+      <Text style={[styles.emptyText, { color: style.H3 }]}>
         No se encontraron meseros con ese nombre.
       </Text>
     </View>
   );
 
-    return (
-        <View style={styles.container}>
-
-      <View style={styles.tableInfo}>
-        <Text style={styles.tableInfoText}>
-          Mesa #{params.tableId} - {params.chairs} sillas
-        </Text>
-        <Text style={styles.coordinatesText}>
-          Posición: ({params.x}, {params.y})
-        </Text>
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF6363" />
-          <Text style={styles.loadingText}>Cargando meseros disponibles...</Text>
+  return (
+    <>
+      <Stack.Screen 
+        options={{
+          title: "Asignar mesero",
+          headerTitleStyle: { fontWeight: "bold" }
+        }}
+      />
+      <View style={[styles.container, { backgroundColor: style.BgInterface }]}>
+        <View style={[styles.tableInfo, { backgroundColor: style.BgCard }]}>
+          <Text style={[styles.tableInfoText, { color: style.H1 }]}>
+            Mesa #{params.tableId} - {params.chairs} sillas
+          </Text>
+          <Text style={[styles.coordinatesText, { color: style.H3 }]}>
+            Posición: ({params.x}, {params.y})
+          </Text>
         </View>
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-                    <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={() => router.back()}
-                    >
-            <Text style={styles.retryButtonText}>Volver</Text>
-                    </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          {/* Información del usuario asignado */}
-          {tableUser ? (
-            <View style={styles.userInfoContainer}>
-              <Text style={styles.userInfoTitle}>Usuario Asignado</Text>
-              <View style={styles.userInfoCard}>
-                <Text style={styles.userName}>
-                  {userDetails ? userDetails.name : "Cargando..."}
-                </Text>
-                <Text style={styles.userEmail}>
-                  {userDetails ? userDetails.email : ""}
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.userInfoContainer}>
-              <Text style={styles.userInfoTitle}>Asignar Usuario</Text>
-              <View style={styles.userInfoCard}>
-                <Text style={styles.noUserText}>
-                  No hay usuario asignado a esta mesa.
-                </Text>
-              </View>
-            </View>
-          )}
 
-          {/* Buscador */}
-          <View style={styles.searchContainer}>
-            <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Buscar mesero..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={style.H1} />
+            <Text style={[styles.loadingText, { color: style.H1 }]}>Cargando meseros disponibles...</Text>
           </View>
-
-          {/* Lista de meseros */}
-          <View style={styles.sectionContainer}>
-            <Text style={styles.sectionTitle}>Meseros Disponibles</Text>
-            {waiters.length > 0 ? (
-              <FlatList
-                data={filteredWaiters}
-                renderItem={renderWaiterItem}
-                keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
-                ListEmptyComponent={renderEmptyList}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={refreshing}
-                    onRefresh={onRefresh}
-                    colors={["#FF6363"]}
-                  />
-                }
-                contentContainerStyle={styles.listContent}
-              />
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Icon name="people" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>
-                  No hay meseros disponibles en este momento.
-                </Text>
-                    </View>
-            )}
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: style.H1 }]}>{error}</Text>
+            <TouchableOpacity 
+              style={[styles.retryButton, { backgroundColor: style.H1 }]}
+              onPress={() => router.back()}
+            >
+              <Text style={[styles.retryButtonText, { color: style.H1 }]}>Volver</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {/* Información del usuario asignado */}
+            {tableUser ? (
+              <View style={[styles.userInfoContainer, { backgroundColor: style.BgCard }]}>
+                <Text style={[styles.userInfoTitle, { color: style.H1 }]}>Usuario Asignado</Text>
+                <View style={[styles.userInfoCard, { backgroundColor: style.BgInterface }]}>
+                  <Text style={[styles.userName, { color: style.H1 }]}>
+                    {userDetails ? userDetails.name : "Cargando..."}
+                  </Text>
+                  <Text style={[styles.userEmail, { color: style.H3 }]}>
+                    {userDetails ? userDetails.email : ""}
+                  </Text>
                 </View>
-        </>
-      )}
-        </View>
-    );
+              </View>
+            ) : (
+              <View style={[styles.userInfoContainer, { backgroundColor: style.BgCard }]}>
+                <Text style={[styles.userInfoTitle, { color: style.H1 }]}>Asignar Usuario</Text>
+                <View style={[styles.userInfoCard, { backgroundColor: style.BgInterface }]}>
+                  <Text style={[styles.noUserText, { color: style.H3 }]}>
+                    No hay usuario asignado a esta mesa.
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Buscador */}
+            <View className="mt-5" style={[styles.searchContainer, { backgroundColor: style.BgCard, borderColor: style.H3 }]}>
+              <Icon name="search" size={20} color={style.H3} style={styles.searchIcon} />
+              <TextInput
+                style={[styles.searchInput, { color: style.P }]}
+                placeholder="Buscar mesero..."
+                placeholderTextColor={style.H3}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            {/* Lista de meseros */}
+            <View className="mt-2 mb-2"  style={styles.sectionContainer}>
+              <Text style={[styles.sectionTitle, { color: style.H1 }]}>Meseros Disponibles</Text>
+              {waiters.length > 0 ? (
+                <FlatList
+                  data={filteredWaiters}
+                  renderItem={renderWaiterItem}
+                  keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
+                  ListEmptyComponent={renderEmptyList}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshing}
+                      onRefresh={onRefresh}
+                      colors={[style.H1]}
+                    />
+                  }
+                  contentContainerStyle={styles.listContent}
+                />
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Icon name="people" size={48} color={style.H3} />
+                  <Text style={[styles.emptyText, { color: style.H3 }]}>
+                    No hay meseros disponibles en este momento.
+                  </Text>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+      </View>
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
   },
   header: {
     flexDirection: "row",
@@ -326,9 +342,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
   },
   backButton: {
     padding: 8,
@@ -336,21 +350,17 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
   },
   tableInfo: {
     padding: 16,
-    backgroundColor: "#fff",
     marginBottom: 8,
   },
   tableInfoText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#333",
   },
   coordinatesText: {
     fontSize: 14,
-    color: "#666",
     marginTop: 4,
   },
   loadingContainer: {
@@ -361,7 +371,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#666",
   },
   errorContainer: {
     flex: 1,
@@ -371,30 +380,25 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: "#FF0000",
     textAlign: "center",
     marginBottom: 16,
   },
   retryButton: {
-        backgroundColor: "#FF6363",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: "#fff",
     fontWeight: "bold",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     marginHorizontal: 16,
     marginBottom: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
   },
   searchIcon: {
     marginRight: 8,
@@ -412,7 +416,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
     marginBottom: 8,
   },
   listContent: {
@@ -423,12 +426,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
   },
   waiterInfo: {
     flex: 1,
@@ -436,60 +437,49 @@ const styles = StyleSheet.create({
   waiterName: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#333",
   },
   waiterEmail: {
     fontSize: 14,
-    color: "#666",
     marginTop: 4,
   },
   emptyContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 40,
   },
   emptyText: {
     fontSize: 16,
-    color: "#666",
     textAlign: "center",
     marginTop: 16,
   },
   userInfoContainer: {
     padding: 16,
-    backgroundColor: "#fff",
     marginBottom: 8,
   },
   userInfoTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
     marginBottom: 8,
   },
   userInfoCard: {
-    backgroundColor: "#f9f9f9",
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
   },
   userName: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#333",
   },
   userEmail: {
     fontSize: 14,
-    color: "#666",
     marginTop: 4,
   },
   noUserText: {
     fontSize: 16,
-    color: "#666",
     marginBottom: 16,
   },
   changeUserButton: {
-    backgroundColor: "#FF6363",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -497,7 +487,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   changeUserButtonText: {
-    color: "#fff",
     fontWeight: "bold",
   },
 });

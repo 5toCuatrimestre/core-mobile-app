@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useContext } from "react";
 import { View, Modal, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from "react-native";
 import { createTable } from "../api/services/tableService";
+import { StyleContext } from "../utils/StyleContext"; // Importamos el contexto de estilos
 
 const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gridX, gridY, onTableCreated }) => {
   const [isCreating, setIsCreating] = React.useState(false);
+  const { style } = useContext(StyleContext); // Obtenemos los estilos globales
 
   const handleConfirm = async () => {
     if (!chairs || chairs.trim() === '') {
@@ -86,11 +88,16 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
   return (
     <Modal transparent={true} visible={visible} animationType="slide">
       <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Ingresa la cantidad de sillas</Text>
+        <View style={[styles.modalContent, { backgroundColor: style.BgCard }]}>
+          <Text style={[styles.modalTitle, { color: style.H1 }]}>Ingresa la cantidad de sillas</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { 
+              borderColor: style.H3,
+              color: style.H1,
+              backgroundColor: style.BgInterface
+            }]}
             placeholder="Número de sillas"
+            placeholderTextColor={style.H3}
             keyboardType="number-pad"
             value={chairs}
             onChangeText={(text) => {
@@ -102,22 +109,22 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
           />
           {isCreating ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#FF6363" />
-              <Text style={styles.loadingText}>Creando mesa...</Text>
+              <ActivityIndicator size="small" color={style.H1} />
+              <Text style={[styles.loadingText, { color: style.H1 }]}>Creando mesa...</Text>
             </View>
           ) : (
             <View style={styles.buttonContainer}>
               <TouchableOpacity 
-                style={[styles.button, styles.cancelButton]} 
+                style={[styles.button, styles.cancelButton, { backgroundColor: "#FF0000" }]} 
                 onPress={onCancel}
               >
-                <Text style={styles.buttonText}>Cancelar</Text>
+                <Text style={[styles.buttonText, { color: style.H1 }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.button, styles.confirmButton]} 
+                style={[styles.button, styles.confirmButton, { backgroundColor: "#3B82F6" }]} 
                 onPress={handleConfirm}
               >
-                <Text style={styles.buttonText}>Confirmar</Text>
+                <Text style={[styles.buttonText, { color: style.H1 }]}>Confirmar</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -135,7 +142,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    backgroundColor: "white",
     padding: 20,
     borderRadius: 10,
     alignItems: "center",
@@ -149,7 +155,6 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     borderWidth: 1,
-    borderColor: "#ccc",
     padding: 10,
     marginBottom: 10,
     borderRadius: 5,
@@ -164,7 +169,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginLeft: 10,
     fontSize: 16,
-    color: "#333",
   },
   buttonContainer: {
     flexDirection: "row",
@@ -180,14 +184,7 @@ const styles = StyleSheet.create({
     minWidth: 120,
     alignItems: "center",
   },
-  cancelButton: {
-    backgroundColor: "#FF6363",
-  },
-  confirmButton: {
-    backgroundColor: "#4CAF50",
-  },
   buttonText: {
-    color: "white",
     fontWeight: "bold",
     fontSize: 16,
   },
