@@ -45,6 +45,8 @@ export default function Space() {
   const params = useLocalSearchParams();
   const [tableUsers, setTableUsers] = useState({});
   const [userDetails, setUserDetails] = useState({});
+  const [showChairsModal, setShowChairsModal] = useState(false);
+  const [tempCoords, setTempCoords] = useState({ gridX: 0, gridY: 0 });
 
   // Función para convertir coordenadas de la cuadrícula virtual a píxeles
   const gridToPixels = (gridX, gridY) => {
@@ -247,55 +249,26 @@ export default function Space() {
   };
 
   const addTableWithChairs = async (gridX, gridY) => {
-    setIsCreating(true);
-    setShowModal(true);
+    console.log("Space: addTableWithChairs llamado con coordenadas", { gridX, gridY });
     
     // Guardamos las coordenadas para usarlas cuando se confirme la mesa
-    const tempCoords = { gridX, gridY };
+    setTempCoords({ gridX, gridY });
+    console.log("Space: Coordenadas temporales guardadas", { gridX, gridY });
     
-    // Función para confirmar la creación de la mesa
-    const confirmTable = async () => {
-      try {
-        // Convertimos las coordenadas de la cuadrícula a decimales (0-1) para el servidor
-        // Aseguramos que las coordenadas estén dentro del rango 0-1
-        const xlocation = Math.max(0, Math.min(1, tempCoords.gridX / GRID_SIZE));
-        const ylocation = Math.max(0, Math.min(1, tempCoords.gridY / GRID_SIZE));
-        
-        console.log(`Creando mesa en coordenadas: (${xlocation}, ${ylocation})`);
-        
-        // Creamos la mesa en el servidor
-        const response = await createTable({
-          capacity: chairs,
-          xlocation,
-          ylocation
-        });
-        
-        // Si la creación fue exitosa, añadimos la mesa al estado local
-        if (response && response.result) {
-          const newTable = {
-            id: response.result.positionSiteId,
-            gridX: tempCoords.gridX,
-            gridY: tempCoords.gridY,
-            chairs: chairs,
-            waiter: null,
-            status: true
-          };
-          
-          setDroppedItems((prevItems) => [...prevItems, newTable]);
-        } else {
-          throw new Error("Error al crear la mesa en el servidor");
-        }
-      } catch (error) {
-        console.error("Error al crear la mesa:", error);
-        setError("Error al crear la mesa. Por favor, inténtalo de nuevo.");
-      } finally {
-        setShowModal(false);
-        setIsCreating(false);
-      }
-    };
-    
-    // Guardamos la función de confirmación para usarla cuando se cierre el modal
-    window.confirmTable = confirmTable;
+    // Mostramos el modal para ingresar el número de sillas
+    console.log("Space: Mostrando modal de sillas");
+    setShowChairsModal(true);
+  };
+
+  const handleCancelChairsModal = () => {
+    console.log("Space: Cancelando modal de sillas");
+    setShowChairsModal(false);
+    setChairs("");
+  };
+
+  const handleTableCreated = (newTable) => {
+    console.log("Space: Mesa creada, actualizando estado", newTable);
+    setDroppedItems((prevItems) => [...prevItems, newTable]);
   };
 
   // Función para actualizar la posición de una mesa en el servidor
@@ -588,11 +561,14 @@ export default function Space() {
 
       {/* Modal para ingresar la cantidad de sillas */}
       <ChairsModal
-        visible={showModal}
+        visible={showChairsModal}
         chairs={chairs}
         setChairs={setChairs}
-        confirmTable={window.confirmTable}
-        isCreating={isCreating}
+        onCancel={handleCancelChairsModal}
+        positionSiteId={params.spaceId}
+        gridX={tempCoords.gridX}
+        gridY={tempCoords.gridY}
+        onTableCreated={handleTableCreated}
       />
     </View>
   );

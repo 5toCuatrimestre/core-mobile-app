@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * Actualmente configurada para desarrollo local (localhost).
  * En producción debería cambiarse por la URL real del servidor.
  */
-export const baseURL = "http://192.168.110.108:5000/core";
+export const baseURL = "http://192.168.110.126:5000/core";
 
 /**
  * Función para realizar el inicio de sesión del usuario.
