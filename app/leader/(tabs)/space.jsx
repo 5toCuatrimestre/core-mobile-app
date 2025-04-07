@@ -13,7 +13,14 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import ChairsModal from "../../../components/ChairsModal"; // 🔹 Importamos el modal externo
 import { useRouter } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
-import { getAllTables, createTable, updateTable, getTableUser, getUserDetails, deleteTable } from "../../../api/services/tableService"; // Importamos el servicio de mesas
+import {
+  getAllTables,
+  createTable,
+  updateTable,
+  getTableUser,
+  getUserDetails,
+  deleteTable,
+} from "../../../api/services/tableService"; // Importamos el servicio de mesas
 import { useFocusEffect } from "expo-router";
 
 // Constantes para el sistema de coordenadas
@@ -52,7 +59,7 @@ export default function Space() {
   const gridToPixels = (gridX, gridY) => {
     return {
       x: (gridX / GRID_SIZE) * canvasDimensions.current.width,
-      y: (gridY / GRID_SIZE) * canvasDimensions.current.height
+      y: (gridY / GRID_SIZE) * canvasDimensions.current.height,
     };
   };
 
@@ -60,7 +67,7 @@ export default function Space() {
   const pixelsToGrid = (pixelX, pixelY) => {
     return {
       x: Math.round((pixelX / canvasDimensions.current.width) * GRID_SIZE),
-      y: Math.round((pixelY / canvasDimensions.current.height) * GRID_SIZE)
+      y: Math.round((pixelY / canvasDimensions.current.height) * GRID_SIZE),
     };
   };
 
@@ -68,7 +75,7 @@ export default function Space() {
   const normalizeCoordinates = (gridX, gridY) => {
     let normalizedX = gridX;
     let normalizedY = gridY;
-    
+
     // Ajustamos coordenadas negativas
     if (normalizedX < 0) {
       normalizedX = 10; // Posición inicial en el lado izquierdo
@@ -76,11 +83,11 @@ export default function Space() {
     if (normalizedY < 0) {
       normalizedY = 10; // Posición inicial en la parte superior
     }
-    
+
     // Aseguramos que las coordenadas no excedan el tamaño de la cuadrícula
     normalizedX = Math.min(normalizedX, GRID_SIZE - 10);
     normalizedY = Math.min(normalizedY, GRID_SIZE - 10);
-    
+
     return { x: normalizedX, y: normalizedY };
   };
 
@@ -90,7 +97,7 @@ export default function Space() {
       setLoading(true);
       setError(null);
       const response = await getAllTables();
-      
+
       // Verificamos si la respuesta tiene el formato esperado
       if (response && response.result && Array.isArray(response.result)) {
         // Transformamos los datos del servidor al formato que espera nuestro componente
@@ -99,7 +106,7 @@ export default function Space() {
           // No normalizamos aquí para mantener las coordenadas exactas del servidor
           const gridX = table.xlocation * GRID_SIZE;
           const gridY = table.ylocation * GRID_SIZE;
-          
+
           // Si las coordenadas originales son negativas, distribuimos las mesas en el canvas
           if (table.xlocation < 0 || table.ylocation < 0) {
             // Distribuimos las mesas en una cuadrícula 2x2
@@ -107,15 +114,15 @@ export default function Space() {
             const col = index % 2;
             return {
               id: table.positionSiteId,
-              gridX: 20 + (col * 30), // 20, 50
-              gridY: 20 + (row * 30), // 20, 50
+              gridX: 20 + col * 30, // 20, 50
+              gridY: 20 + row * 30, // 20, 50
               chairs: table.capacity,
               waiter: table.waiter || null, // Si existe un mesero asignado
               waiterEmail: table.waiterEmail || null, // Si existe un email de mesero asignado
-              status: table.status
+              status: table.status,
             };
           }
-          
+
           return {
             id: table.positionSiteId,
             gridX: gridX,
@@ -123,17 +130,17 @@ export default function Space() {
             chairs: table.capacity,
             waiter: table.waiter || null, // Si existe un mesero asignado
             waiterEmail: table.waiterEmail || null, // Si existe un email de mesero asignado
-            status: table.status
+            status: table.status,
           };
         });
-        
+
         // Actualizamos el contador de IDs para que no haya conflictos
         if (serverTables.length > 0) {
-          idCounterRef.current = Math.max(...serverTables.map(t => t.id)) + 1;
+          idCounterRef.current = Math.max(...serverTables.map((t) => t.id)) + 1;
         }
-        
+
         setDroppedItems(serverTables);
-        
+
         // Cargar usuarios asignados a las mesas
         await loadTableUsers(serverTables);
       } else {
@@ -152,14 +159,18 @@ export default function Space() {
     try {
       const tableUsersData = {};
       const userDetailsData = {};
-      
+
       for (const table of tables) {
         try {
           const tableUserResponse = await getTableUser(table.id);
-          if (tableUserResponse && tableUserResponse.result && tableUserResponse.result.length > 0) {
+          if (
+            tableUserResponse &&
+            tableUserResponse.result &&
+            tableUserResponse.result.length > 0
+          ) {
             const tableUser = tableUserResponse.result[0];
             tableUsersData[table.id] = tableUser;
-            
+
             // Obtener detalles del usuario
             const userDetailsResponse = await getUserDetails(tableUser.userId);
             if (userDetailsResponse && userDetailsResponse.result) {
@@ -167,10 +178,13 @@ export default function Space() {
             }
           }
         } catch (error) {
-          console.error(`Error al cargar usuario para la mesa ${table.id}:`, error);
+          console.error(
+            `Error al cargar usuario para la mesa ${table.id}:`,
+            error
+          );
         }
       }
-      
+
       setTableUsers(tableUsersData);
       setUserDetails(userDetailsData);
     } catch (error) {
@@ -192,7 +206,10 @@ export default function Space() {
     updateCanvasDimensions();
 
     // Suscribimos a cambios en el tamaño de la ventana
-    const subscription = Dimensions.addEventListener('change', updateCanvasDimensions);
+    const subscription = Dimensions.addEventListener(
+      "change",
+      updateCanvasDimensions
+    );
 
     // Limpiamos la suscripción al desmontar
     return () => {
@@ -208,17 +225,17 @@ export default function Space() {
       setLastTap(0); // Reiniciamos para el siguiente ciclo
     } else {
       // Clic simple - abrimos la pantalla de asignación
-        router.push({
-            pathname: "/leader/AssignWaiter",
-            params: {
+      router.push({
+        pathname: "/leader/AssignWaiter",
+        params: {
           tableId: item.id,
           x: item.gridX.toFixed(1),
           y: item.gridY.toFixed(1),
           chairs: item.chairs,
           currentWaiter: item.waiter,
-          previousScreen: "/leader/(tabs)/space"
-            }
-        });
+          previousScreen: "/leader/(tabs)/space",
+        },
+      });
     }
     setLastTap(now);
   };
@@ -228,7 +245,7 @@ export default function Space() {
     const timer = setTimeout(() => {
       handleLongPress(item);
     }, 500); // 500ms para considerar un clic mantenido
-    
+
     setLongPressTimer(timer);
   };
 
@@ -238,10 +255,10 @@ export default function Space() {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
-};
+  };
 
   const assignWaiter = (waiterName, tableId) => {
-    setDroppedItems((prevItems) => 
+    setDroppedItems((prevItems) =>
       prevItems.map((item) =>
         item.id === tableId ? { ...item, waiter: waiterName } : item
       )
@@ -249,12 +266,15 @@ export default function Space() {
   };
 
   const addTableWithChairs = async (gridX, gridY) => {
-    console.log("Space: addTableWithChairs llamado con coordenadas", { gridX, gridY });
-    
+    console.log("Space: addTableWithChairs llamado con coordenadas", {
+      gridX,
+      gridY,
+    });
+
     // Guardamos las coordenadas para usarlas cuando se confirme la mesa
     setTempCoords({ gridX, gridY });
     console.log("Space: Coordenadas temporales guardadas", { gridX, gridY });
-    
+
     // Mostramos el modal para ingresar el número de sillas
     console.log("Space: Mostrando modal de sillas");
     setShowChairsModal(true);
@@ -275,20 +295,22 @@ export default function Space() {
   const updateTablePosition = async (tableId, gridX, gridY, chairs) => {
     try {
       setIsUpdating(true);
-      
+
       // Convertimos las coordenadas de la cuadrícula a decimales (0-1) para el servidor
       // Aseguramos que las coordenadas estén dentro del rango 0-1
       const xlocation = Math.max(0, Math.min(1, gridX / GRID_SIZE));
       const ylocation = Math.max(0, Math.min(1, gridY / GRID_SIZE));
-      
-      console.log(`Actualizando mesa ${tableId} a coordenadas: (${xlocation}, ${ylocation})`);
-      
+
+      console.log(
+        `Actualizando mesa ${tableId} a coordenadas: (${xlocation}, ${ylocation})`
+      );
+
       const response = await updateTable(tableId, {
         capacity: chairs,
         xlocation,
-        ylocation
+        ylocation,
       });
-      
+
       // Si la actualización fue exitosa, actualizamos el estado local
       if (response && response.result) {
         console.log(`Mesa ${tableId} actualizada en el servidor`);
@@ -310,18 +332,27 @@ export default function Space() {
       onPanResponderMove: (_, gesture) => {
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
           // Convertimos las coordenadas de píxeles a la cuadrícula virtual
-          const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
+          const gridCoords = pixelsToGrid(
+            gesture.moveX - px,
+            gesture.moveY - py
+          );
           setDraggingItem({ gridX: gridCoords.x, gridY: gridCoords.y });
         });
       },
       onPanResponderRelease: (_, gesture) => {
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
           // Convertimos las coordenadas de píxeles a la cuadrícula virtual
-          const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
-          
+          const gridCoords = pixelsToGrid(
+            gesture.moveX - px,
+            gesture.moveY - py
+          );
+
           // Aseguramos que las coordenadas estén dentro del rango de la cuadrícula
-          const normalizedCoords = normalizeCoordinates(gridCoords.x, gridCoords.y);
-          
+          const normalizedCoords = normalizeCoordinates(
+            gridCoords.x,
+            gridCoords.y
+          );
+
           addTableWithChairs(normalizedCoords.x, normalizedCoords.y);
         });
 
@@ -343,8 +374,8 @@ export default function Space() {
         y: item.gridY.toFixed(1),
         chairs: item.chairs,
         currentWaiter: item.waiter,
-        previousScreen: "/leader/(tabs)/space"
-      }
+        previousScreen: "/leader/(tabs)/space",
+      },
     });
   };
 
@@ -357,19 +388,25 @@ export default function Space() {
       },
       onPanResponderMove: (_, gesture) => {
         if (selectedTableId !== item.id) return;
-        
+
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
           // Convertimos las coordenadas de píxeles a la cuadrícula virtual
-          const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
-          
+          const gridCoords = pixelsToGrid(
+            gesture.moveX - px,
+            gesture.moveY - py
+          );
+
           // Aseguramos que las coordenadas estén dentro del rango de la cuadrícula
-          const normalizedCoords = normalizeCoordinates(gridCoords.x, gridCoords.y);
-          
+          const normalizedCoords = normalizeCoordinates(
+            gridCoords.x,
+            gridCoords.y
+          );
+
           const alignedPosition = getAlignedPosition(
             { gridX: normalizedCoords.x, gridY: normalizedCoords.y },
             item.id
           );
-          
+
           setDroppedItems((prevItems) =>
             prevItems.map((prevItem) =>
               prevItem.id === item.id
@@ -385,30 +422,43 @@ export default function Space() {
       },
       onPanResponderRelease: (_, gesture) => {
         if (selectedTableId !== item.id) return;
-        
+
         // Obtenemos la posición final de la mesa
         canvasRef.current.measure((fx, fy, width, height, px, py) => {
           // Convertimos las coordenadas de píxeles a la cuadrícula virtual
-          const gridCoords = pixelsToGrid(gesture.moveX - px, gesture.moveY - py);
-          
+          const gridCoords = pixelsToGrid(
+            gesture.moveX - px,
+            gesture.moveY - py
+          );
+
           // Aseguramos que las coordenadas estén dentro del rango de la cuadrícula
-          const normalizedCoords = normalizeCoordinates(gridCoords.x, gridCoords.y);
-          
+          const normalizedCoords = normalizeCoordinates(
+            gridCoords.x,
+            gridCoords.y
+          );
+
           const alignedPosition = getAlignedPosition(
             { gridX: normalizedCoords.x, gridY: normalizedCoords.y },
             item.id
           );
-          
+
           // Actualizamos la mesa en el servidor
           const now = Date.now();
           // Limitamos la frecuencia de actualizaciones a una cada 500ms
           if (now - lastUpdateTime.current > 500) {
             lastUpdateTime.current = now;
-            console.log(`Guardando mesa ${item.id} en coordenadas: (${alignedPosition.gridX}, ${alignedPosition.gridY})`);
-            updateTablePosition(item.id, alignedPosition.gridX, alignedPosition.gridY, item.chairs);
+            console.log(
+              `Guardando mesa ${item.id} en coordenadas: (${alignedPosition.gridX}, ${alignedPosition.gridY})`
+            );
+            updateTablePosition(
+              item.id,
+              alignedPosition.gridX,
+              alignedPosition.gridY,
+              item.chairs
+            );
           }
         });
-        
+
         // Desactivamos el modo de movimiento después de soltar
         setTimeout(() => {
           setIsMoving(false);
@@ -446,14 +496,14 @@ export default function Space() {
   // Actualizamos el estado local cuando se asigna un mesero
   useEffect(() => {
     if (params.waiter && params.tableId) {
-      setDroppedItems(prevItems => 
-        prevItems.map(item => 
-          item.id === parseInt(params.tableId) 
-            ? { 
-                ...item, 
+      setDroppedItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === parseInt(params.tableId)
+            ? {
+                ...item,
                 waiter: params.waiter,
-                waiterEmail: params.waiterEmail
-              } 
+                waiterEmail: params.waiterEmail,
+              }
             : item
         )
       );
@@ -472,7 +522,7 @@ export default function Space() {
 
   const handleDeletePress = async (item) => {
     console.log("Space: handleDeletePress llamado con mesa", item);
-    
+
     // Mostrar un diálogo de confirmación
     Alert.alert(
       "Eliminar Mesa",
@@ -480,7 +530,7 @@ export default function Space() {
       [
         {
           text: "Cancelar",
-          style: "cancel"
+          style: "cancel",
         },
         {
           text: "Eliminar",
@@ -489,22 +539,27 @@ export default function Space() {
               console.log(`Eliminando mesa con ID: ${item.id}`);
               await deleteTable(item.id);
               console.log(`Mesa ${item.id} eliminada correctamente`);
-              
+
               // Actualizar el estado local para eliminar la mesa
-              setDroppedItems((prevItems) => prevItems.filter((table) => table.id !== item.id));
-              
+              setDroppedItems((prevItems) =>
+                prevItems.filter((table) => table.id !== item.id)
+              );
+
               // Deseleccionar la mesa
               setSelectedTableId(null);
-              
+
               // Mostrar mensaje de éxito
               Alert.alert("Éxito", "La mesa ha sido eliminada correctamente.");
             } catch (error) {
               console.error("Error al eliminar la mesa:", error);
-              Alert.alert("Error", "No se pudo eliminar la mesa. Por favor, inténtalo de nuevo.");
+              Alert.alert(
+                "Error",
+                "No se pudo eliminar la mesa. Por favor, inténtalo de nuevo."
+              );
             }
           },
-          style: "destructive"
-        }
+          style: "destructive",
+        },
       ]
     );
   };
@@ -533,13 +588,14 @@ export default function Space() {
         {/* Ícono de mesa mientras se arrastra dentro del lienzo */}
         {draggingItem && (
           <View
-            style={[ 
+            style={[
               styles.iconWrapper,
               {
                 left: gridToPixels(draggingItem.gridX, draggingItem.gridY).x,
                 top: gridToPixels(draggingItem.gridX, draggingItem.gridY).y,
               },
-            ]}>
+            ]}
+          >
             <Icon name="table-restaurant" size={30} color="gray" />
           </View>
         )}
@@ -557,25 +613,38 @@ export default function Space() {
             key={item.id}
             {...getItemPanResponder(item).panHandlers}
             style={[
-              styles.iconWrapper, 
-              { 
-                left: gridToPixels(item.gridX, item.gridY).x, 
-                top: gridToPixels(item.gridX, item.gridY).y 
-              }
+              styles.iconWrapper,
+              {
+                left: gridToPixels(item.gridX, item.gridY).x,
+                top: gridToPixels(item.gridX, item.gridY).y,
+              },
             ]}
             onTouchEnd={() => handleTableSelect(item)}
           >
-            <View style={[
-              styles.table, 
-              item.status ? styles.activeTable : styles.inactiveTable,
-              selectedTableId === item.id && styles.selectedTable
-            ]}>
+            <View
+              style={[
+                styles.table,
+                getUserNameForTable(item.id)
+                  ? styles.activeTable
+                  : styles.inactiveTable,
+                selectedTableId === item.id && styles.selectedTable,
+              ]}
+            >
               <Icon name="table-restaurant" size={30} color="white" />
             </View>
-            
+
+            {/* Información de la mesa */}
+            <View style={{ alignItems: "center", width: "100%" }}>
+              <Text style={styles.chairsText}>{item.chairs}</Text>
+              {/* Mostrar nombre del mesero si está asignado */}
+              {item.waiter && (
+                <Text style={styles.waiterText}>{item.waiter}</Text>
+              )}
+            </View>
+
             {/* Botón de detalles */}
             {selectedTableId === item.id && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.detailsButton}
                 onPress={() => handleDetailsPress(item)}
               >
@@ -586,7 +655,7 @@ export default function Space() {
 
             {/* Botón de eliminar */}
             {selectedTableId === item.id && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => handleDeletePress(item)}
               >
@@ -633,18 +702,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   chairsText: {
-    fontSize: 12, 
+    fontSize: 12,
     color: "white",
     fontWeight: "bold",
     position: "absolute",
-    bottom: -35, 
-    alignSelf: "center", 
-    backgroundColor: "rgba(0, 0, 0, 0.7)", 
+    bottom: -35,
+    alignSelf: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 5,
-    minWidth: 28, 
-    textAlign: "center", 
+    minWidth: 28,
+    textAlign: "center",
   },
   waiterText: {
     fontSize: 11, // Tamaño más pequeño
