@@ -13,7 +13,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import ChairsModal from "../../../components/ChairsModal"; // 🔹 Importamos el modal externo
 import { useRouter } from "expo-router";
 import { useLocalSearchParams } from "expo-router";
-import { getAllTables, createTable, updateTable, getTableUser, getUserDetails } from "../../../api/services/tableService"; // Importamos el servicio de mesas
+import { getAllTables, createTable, updateTable, getTableUser, getUserDetails, deleteTable } from "../../../api/services/tableService"; // Importamos el servicio de mesas
 import { useFocusEffect } from "expo-router";
 
 // Constantes para el sistema de coordenadas
@@ -208,17 +208,17 @@ export default function Space() {
       setLastTap(0); // Reiniciamos para el siguiente ciclo
     } else {
       // Clic simple - abrimos la pantalla de asignación
-      router.push({
-        pathname: "/leader/AssignWaiter",
-        params: {
+        router.push({
+            pathname: "/leader/AssignWaiter",
+            params: {
           tableId: item.id,
           x: item.gridX.toFixed(1),
           y: item.gridY.toFixed(1),
           chairs: item.chairs,
           currentWaiter: item.waiter,
           previousScreen: "/leader/(tabs)/space"
-        }
-      });
+            }
+        });
     }
     setLastTap(now);
   };
@@ -238,7 +238,7 @@ export default function Space() {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
-  };
+};
 
   const assignWaiter = (waiterName, tableId) => {
     setDroppedItems((prevItems) => 
@@ -470,6 +470,45 @@ export default function Space() {
     return null;
   };
 
+  const handleDeletePress = async (item) => {
+    console.log("Space: handleDeletePress llamado con mesa", item);
+    
+    // Mostrar un diálogo de confirmación
+    Alert.alert(
+      "Eliminar Mesa",
+      "¿Estás seguro de que deseas eliminar esta mesa?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Eliminar",
+          onPress: async () => {
+            try {
+              console.log(`Eliminando mesa con ID: ${item.id}`);
+              await deleteTable(item.id);
+              console.log(`Mesa ${item.id} eliminada correctamente`);
+              
+              // Actualizar el estado local para eliminar la mesa
+              setDroppedItems((prevItems) => prevItems.filter((table) => table.id !== item.id));
+              
+              // Deseleccionar la mesa
+              setSelectedTableId(null);
+              
+              // Mostrar mensaje de éxito
+              Alert.alert("Éxito", "La mesa ha sido eliminada correctamente.");
+            } catch (error) {
+              console.error("Error al eliminar la mesa:", error);
+              Alert.alert("Error", "No se pudo eliminar la mesa. Por favor, inténtalo de nuevo.");
+            }
+          },
+          style: "destructive"
+        }
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View ref={canvasRef} style={styles.canvas}>
@@ -532,17 +571,6 @@ export default function Space() {
               selectedTableId === item.id && styles.selectedTable
             ]}>
               <Icon name="table-restaurant" size={30} color="white" />
-              <View style={{ alignItems: "center", width: "100%" }}>
-                <Text style={styles.chairsText}>{item.chairs}</Text>
-                {/* Mostrar nombre del mesero si está asignado */}
-                {item.waiter && (
-                  <Text style={styles.waiterText}>{item.waiter}</Text>
-                )}
-                {/* Mostrar nombre del usuario si está asignado */}
-                {getUserNameForTable(item.id) && (
-                  <Text style={styles.userText}>{getUserNameForTable(item.id)}</Text>
-                )}
-              </View>
             </View>
             
             {/* Botón de detalles */}
@@ -553,6 +581,17 @@ export default function Space() {
               >
                 <Icon name="info" size={20} color="white" />
                 <Text style={styles.detailsButtonText}>Detalles</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Botón de eliminar */}
+            {selectedTableId === item.id && (
+              <TouchableOpacity 
+                style={styles.deleteButton}
+                onPress={() => handleDeletePress(item)}
+              >
+                <Icon name="delete" size={20} color="white" />
+                <Text style={styles.deleteButtonText}>Eliminar</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -724,6 +763,30 @@ const styles = StyleSheet.create({
     left: -25,
   },
   detailsButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    marginLeft: 5,
+    fontSize: 14,
+  },
+  deleteButton: {
+    position: "absolute",
+    bottom: -50,
+    backgroundColor: "#FF0000",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+    minWidth: 100,
+    left: -25,
+  },
+  deleteButtonText: {
     color: "white",
     fontWeight: "bold",
     marginLeft: 5,

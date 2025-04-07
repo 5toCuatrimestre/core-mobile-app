@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
+import { 
+  View, 
+  Text, 
   StyleSheet,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
   Alert,
-  FlatList,
+  FlatList, 
   RefreshControl,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -217,8 +217,8 @@ export default function AssignWaiter() {
     </View>
   );
 
-  return (
-    <View style={styles.container}>
+    return (
+        <View style={styles.container}>
 
       <View style={styles.tableInfo}>
         <Text style={styles.tableInfoText}>
@@ -237,12 +237,12 @@ export default function AssignWaiter() {
       ) : error ? (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
+                    <TouchableOpacity 
             style={styles.retryButton}
             onPress={() => router.back()}
-          >
+                    >
             <Text style={styles.retryButtonText}>Volver</Text>
-          </TouchableOpacity>
+                    </TouchableOpacity>
         </View>
       ) : (
         <>
@@ -305,13 +305,13 @@ export default function AssignWaiter() {
                 <Text style={styles.emptyText}>
                   No hay meseros disponibles en este momento.
                 </Text>
-              </View>
+                    </View>
             )}
-          </View>
+                </View>
         </>
       )}
-    </View>
-  );
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: "#FF6363",
+        backgroundColor: "#FF6363",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -444,9 +444,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
     paddingVertical: 40,
   },
   emptyText: {

@@ -386,3 +386,53 @@ export const updateTableUser = async (assignmentId, routeId, positionSiteId, use
     throw error;
   }
 };
+
+// Función para eliminar una mesa
+export const deleteTable = async (positionSiteId) => {
+  try {
+    // Obtener el token de autenticación
+    const token = await getAuthToken();
+    
+    // Verificar si existe un token válido
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+    
+    console.log(`Eliminando mesa con ID: ${positionSiteId}`);
+    
+    // Realizar la petición DELETE
+    const response = await fetch(`${baseURL}/position-site/${positionSiteId}`, {
+      method: "DELETE",
+      headers: {
+        "accept": "*/*",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    
+    console.log(`Estado de la respuesta: ${response.status} ${response.statusText}`);
+    
+    // Obtener el texto de la respuesta
+    const responseText = await response.text();
+    console.log("Respuesta completa (texto):", responseText);
+    
+    // Intentar analizar como JSON solo si hay contenido
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+        console.log("Respuesta analizada como JSON:", data);
+      } catch (parseError) {
+        console.error("Error al analizar JSON:", parseError);
+        throw new Error(`Error al analizar JSON: ${parseError.message}. Respuesta: ${responseText}`);
+      }
+    } else {
+      console.log("La respuesta está vacía");
+      data = { type: "SUCCESS" };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Error al eliminar la mesa:", error);
+    throw error;
+  }
+};
