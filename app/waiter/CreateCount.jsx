@@ -1,87 +1,269 @@
 import React, { useState, useContext, useEffect, useLayoutEffect } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
 import { Alert } from "react-native";
+import { findPositionSell, createPositionSell, getSellDetails, updateSellDetail } from "../../api/services/forWaiter";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function CreateCount() {
   const router = useRouter();
   const navigation = useNavigation();
   const params = useLocalSearchParams();
+  const { style } = useContext(StyleContext);
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [sellId, setSellId] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [positionSiteId, setPositionSiteId] = useState(null);
+  const [productos, setProductos] = useState([]);
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: "Crear cuenta" });
   }, [navigation]);
-    
-  const { style } = useContext(StyleContext);
-  const [searchQuery, setSearchQuery] = useState("");
 
-  const [productos, setProductos] = useState([
-    { 
-      id: "1", 
-      nombre: "Arroz", 
-      precio: 50, 
-      descripcion: "Suave y esponjoso, perfecto para acompañar platillos.", 
-      cantidad: 3,
-      imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" 
-    },
-    { 
-      id: "2", 
-      nombre: "Amburguesa", 
-      precio: 80, 
-      descripcion: "Jugosa carne de res con queso, lechuga y tomate.", 
-      cantidad: 2,
-      imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" 
-    },
-  ]);
-
-  useEffect(() => {
-    if (params.platilloId) {
-      const productoExistente = productos.find(
-        (producto) => producto.id === params.platilloId
-      );
-
-      if (productoExistente) {
-        aumentarCantidad(params.platilloId);
-      } else {
-        const nuevoPlatillo = {
-          id: params.platilloId,
-          nombre: params.platilloNombre,
-          precio: parseFloat(params.platilloPrecio),
-          descripcion: params.platilloDescripcion,
-          cantidad: 1,
-          imagen: params.platilloImagen,
-        };
-        setProductos([...productos, nuevoPlatillo]);
+  // Función para cargar los detalles de la venta
+  const cargarDetallesVenta = async (currentSellId) => {
+    try {
+      const detailsResponse = await getSellDetails(currentSellId);
+      console.log("Respuesta de detalles de venta:", detailsResponse);
+      
+      if (detailsResponse.type === "SUCCESS" && detailsResponse.result) {
+        // Transformar los detalles al formato de productos
+        const transformedProducts = detailsResponse.result.map(detail => {
+          console.log("Detalle de venta:", detail);
+          return {
+            id: detail.productId.toString(),
+            sellDetailId: detail.sellDetailId, // Ahora sí obtenemos el ID correcto
+            nombre: detail.productName,
+            precio: detail.unitPrice,
+            descripcion: detail.description,
+            cantidad: detail.quantity,
+            imagen: detail.multimedia && detail.multimedia.length > 0 
+              ? detail.multimedia[0].url 
+              : "https://cdn-icons-png.flaticon.com/512/1046/1046784.png",
+            categorias: detail.productCategories.map(cat => cat.name)
+          };
+        });
+        
+        setProductos(transformedProducts);
+        console.log("Productos transformados:", transformedProducts);
       }
+    } catch (error) {
+      console.error("Error al cargar los detalles de la venta:", error);
+      setError("Error al cargar los detalles de la venta: " + error.message);
+    }
+  };
+  
+  // Obtener el ID del usuario y buscar o crear una cuenta
+  useEffect(() => {
+    const initializeSell = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Obtener el ID del usuario
+        const storedUserId = await AsyncStorage.getItem("user_id");
+        if (!storedUserId) {
+          throw new Error("No se encontró el ID del usuario");
+        }
+        
+        const currentUserId = parseInt(storedUserId);
+        setUserId(currentUserId);
+        console.log("ID del usuario obtenido:", currentUserId);
+        
+        // Obtener el ID de la posición desde los parámetros
+        if (!params.id) {
+          throw new Error("No se proporcionó el ID de la posición");
+        }
+        
+        const currentPositionSiteId = parseInt(params.id);
+        setPositionSiteId(currentPositionSiteId);
+        console.log("ID de la posición obtenido:", currentPositionSiteId);
+        
+        // Buscar una cuenta existente para esta posición
+        const sellResponse = await findPositionSell(currentPositionSiteId);
+        console.log("Respuesta de búsqueda de cuenta por posición:", sellResponse);
+        
+        let currentSellId;
+        
+        if (sellResponse.type === "SUCCESS" && sellResponse.result && sellResponse.result.length > 0) {
+          // Usar la cuenta existente
+          const existingSell = sellResponse.result[0];
+          currentSellId = existingSell.sellId;
+          setSellId(currentSellId);
+          console.log("Cuenta existente encontrada:", existingSell);
+        } else {
+          // Crear una nueva cuenta para esta posición
+          const createResponse = await createPositionSell(currentUserId, currentPositionSiteId);
+          console.log("Respuesta de creación de cuenta por posición:", createResponse);
+          
+          if (createResponse.type === "SUCCESS" && createResponse.result) {
+            currentSellId = createResponse.result.sellId;
+            setSellId(currentSellId);
+            console.log("Nueva cuenta creada:", createResponse.result);
+          } else {
+            throw new Error("No se pudo crear una nueva cuenta");
+          }
+        }
+        
+        // Cargar los detalles de la venta
+        if (currentSellId) {
+          await cargarDetallesVenta(currentSellId);
+        }
+      } catch (error) {
+        console.error("Error al inicializar la cuenta:", error);
+        setError("Error al inicializar la cuenta: " + error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initializeSell();
+  }, [params.id]);
 
+  // Recargar detalles cuando se regresa de MenuPlatillos
+  useEffect(() => {
+    if (sellId && params.platilloId) {
+      cargarDetallesVenta(sellId);
+      // Limpiar los parámetros para evitar recargas innecesarias
       router.setParams({});
     }
-  }, [params]);
+  }, [params.platilloId]);
 
   const productosFiltrados = productos.filter((producto) =>
     producto.nombre.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const aumentarCantidad = (id) => {
-    setProductos(
-      productos.map((producto) =>
-        producto.id === id ? { ...producto, cantidad: producto.cantidad + 1 } : producto
-      )
-    );
+  const aumentarCantidad = async (id) => {
+    try {
+      const producto = productos.find(p => p.id === id);
+      if (!producto) {
+        console.error("Producto no encontrado:", id);
+        return;
+      }
+
+      if (!producto.sellDetailId) {
+        console.error("No se encontró el ID del detalle de venta para el producto:", id);
+        return;
+      }
+
+      const nuevaCantidad = producto.cantidad + 1;
+      console.log("Intentando aumentar cantidad:");
+      console.log("- Producto:", producto);
+      console.log("- sellDetailId:", producto.sellDetailId);
+      console.log("- sellId:", sellId);
+      console.log("- productId:", id);
+      console.log("- nuevaCantidad:", nuevaCantidad);
+
+      const response = await updateSellDetail(
+        producto.sellDetailId,
+        sellId,
+        parseInt(id),
+        nuevaCantidad
+      );
+
+      console.log("Respuesta de updateSellDetail:", response);
+
+      if (response.type === "SUCCESS") {
+        console.log("Actualización exitosa, recargando detalles...");
+        await cargarDetallesVenta(sellId);
+      } else {
+        throw new Error(response.text || "Error al actualizar la cantidad");
+      }
+    } catch (error) {
+      console.error("Error al aumentar cantidad:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo actualizar la cantidad: " + error.message
+      );
+    }
   };
 
-  const disminuirCantidad = (id) => {
-    setProductos(
-      productos.map((producto) =>
-        producto.id === id && producto.cantidad > 0
-          ? { ...producto, cantidad: producto.cantidad - 1 }
-          : producto
-      )
-    );
+  const disminuirCantidad = async (id) => {
+    try {
+      const producto = productos.find(p => p.id === id);
+      if (!producto) {
+        console.error("Producto no encontrado:", id);
+        return;
+      }
+
+      if (!producto.sellDetailId) {
+        console.error("No se encontró el ID del detalle de venta para el producto:", id);
+        return;
+      }
+
+      if (producto.cantidad <= 0) {
+        console.log("La cantidad ya es 0, no se puede disminuir más");
+        return;
+      }
+
+      const nuevaCantidad = producto.cantidad - 1;
+      console.log("Intentando disminuir cantidad:");
+      console.log("- Producto:", producto);
+      console.log("- sellDetailId:", producto.sellDetailId);
+      console.log("- sellId:", sellId);
+      console.log("- productId:", id);
+      console.log("- nuevaCantidad:", nuevaCantidad);
+
+      const response = await updateSellDetail(
+        producto.sellDetailId,
+        sellId,
+        parseInt(id),
+        nuevaCantidad
+      );
+
+      console.log("Respuesta de updateSellDetail:", response);
+
+      if (response.type === "SUCCESS") {
+        console.log("Actualización exitosa, recargando detalles...");
+        await cargarDetallesVenta(sellId);
+      } else {
+        throw new Error(response.text || "Error al actualizar la cantidad");
+      }
+    } catch (error) {
+      console.error("Error al disminuir cantidad:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo actualizar la cantidad: " + error.message
+      );
+    }
   };
 
   const total = productos.reduce((sum, producto) => sum + (producto.precio * producto.cantidad), 0);
+
+  // Mostrar indicador de carga
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: style.BgInterface }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={style.H1} />
+          <Text style={[styles.loadingText, { color: style.P }]}>
+            Cargando cuenta...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Mostrar mensaje de error
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: style.BgInterface }]}>
+        <View style={styles.errorContainer}>
+          <Text style={[styles.errorText, { color: style.H1 }]}>{error}</Text>
+          <TouchableOpacity 
+            style={[styles.retryButton, { backgroundColor: style.BgButton }]}
+            onPress={() => router.back()}
+          >
+            <Text style={[styles.retryText, { color: style.P }]}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 p-4" style={{ backgroundColor: style.BgInterface }}>
@@ -101,10 +283,13 @@ export default function CreateCount() {
         <TouchableOpacity 
           className="absolute right-2 top-2 bg-blue-500 w-8 h-8 rounded-full flex items-center justify-center"
           style={{ backgroundColor: "#1e88e5" }}
-          onPress={() => router.push("/waiter/MenuPlatillos")}
+          onPress={() => router.push({
+            pathname: "/waiter/MenuPlatillos",
+            params: { sellId: sellId }
+          })}
         >
           <Text className="text-white text-xl">+</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
       </View>
 
       <ScrollView className="flex-1 mb-4">
@@ -165,3 +350,36 @@ export default function CreateCount() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  retryButton: {
+    padding: 10,
+    borderRadius: 5,
+  },
+  retryText: {
+    fontSize: 16,
+  },
+});
