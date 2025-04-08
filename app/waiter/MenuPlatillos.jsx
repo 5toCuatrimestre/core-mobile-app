@@ -1,11 +1,13 @@
 import React, { useState, useContext, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
-import { useRouter } from "expo-router";
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
 import { getMenu } from "../../api/services/menuService";
+import { createSellDetail, getSellDetails, updateSellDetail } from "../../api/services/forWaiter";
 
 export default function MenuPlatillos({ onAgregarPlatillo }) {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { style } = useContext(StyleContext);
   const [searchQuery, setSearchQuery] = useState("");
   const [platillos, setPlatillos] = useState([]);
@@ -53,17 +55,62 @@ export default function MenuPlatillos({ onAgregarPlatillo }) {
   );
 
   // Función para agregar platillo a la cuenta
-  const agregarPlatillo = (platillo) => {
-    // Navegar de regreso y pasar el platillo seleccionado
-    router.back();
-    // Utilizar parámetros para pasar el platillo seleccionado
-    router.setParams({ 
-      platilloId: platillo.id,
-      platilloNombre: platillo.nombre,
-      platilloPrecio: platillo.precio.toString(),
-      platilloDescripcion: platillo.descripcion,
-      platilloImagen: platillo.imagen
-    });
+  const agregarPlatillo = async (platillo) => {
+    try {
+      // Verificar si tenemos el ID de la venta
+      if (!params.sellId) {
+        throw new Error("No se proporcionó el ID de la venta");
+      }
+
+      // Obtener los detalles actuales de la venta
+      const detallesResponse = await getSellDetails(params.sellId);
+      console.log("Detalles actuales de la venta:", detallesResponse);
+
+      // Buscar si el producto ya existe en los detalles
+      const productoExistente = detallesResponse.result?.find(
+        detail => detail.productId === parseInt(platillo.id)
+      );
+
+      let response;
+      if (productoExistente) {
+        // Si el producto existe, actualizar su cantidad
+        console.log("Producto existente encontrado:", productoExistente);
+        response = await updateSellDetail(
+          productoExistente.sellDetailId,
+          parseInt(params.sellId),
+          parseInt(platillo.id),
+          productoExistente.quantity + 1
+        );
+      } else {
+        // Si el producto no existe, crear un nuevo detalle
+        console.log("Creando nuevo detalle para el producto");
+        response = await createSellDetail(
+          parseInt(params.sellId),
+          parseInt(platillo.id),
+          1 // Cantidad por defecto
+        );
+      }
+
+      if (response.type === "SUCCESS") {
+        // Si la operación fue exitosa, proceder con la navegación
+        router.back();
+        router.setParams({ 
+          platilloId: platillo.id,
+          platilloNombre: platillo.nombre,
+          platilloPrecio: platillo.precio.toString(),
+          platilloDescripcion: platillo.descripcion,
+          platilloImagen: platillo.imagen
+        });
+      } else {
+        throw new Error(response.text || "Error al agregar el producto");
+      }
+    } catch (error) {
+      console.error("Error al agregar platillo:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo agregar el producto a la cuenta: " + error.message
+      );
+    }
   };
 
   return (

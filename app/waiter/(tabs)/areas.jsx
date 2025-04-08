@@ -158,6 +158,7 @@ export default function Areas() {
 
   // Función para manejar el doble clic en una mesa
   const handleDoubleClick = (item) => {
+    console.log("Navegando a CreateCount con posición:", item.positionSiteId);
     router.push({
       pathname: "/waiter/CreateCount",
       params: {
