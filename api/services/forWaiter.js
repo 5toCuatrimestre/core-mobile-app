@@ -530,3 +530,86 @@ export const cancelSell = async (sellId) => {
     throw error;
   }
 };
+
+// Crear una solicitud de cancelación
+export const createCancelRequest = async (sellDetailId, positionSiteId, name, nameWaiter, status, quantity) => {
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+
+    const response = await fetch(`${baseURL}/sell-detail-status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'accept': '*/*'
+      },
+      body: JSON.stringify({
+        sellDetailId,
+        positionSiteId,
+        name,
+        nameWaiter,
+        status,
+        quantity
+      }),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error al crear solicitud de cancelación:', error);
+    throw error;
+  }
+};
+
+// Verificar el estado de una solicitud de cancelación
+export const checkCancelRequestStatus = async (sellDetailStatusId) => {
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+
+    const response = await fetch(`${baseURL}/sell-detail-status/ById/${sellDetailStatusId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'accept': '*/*'
+      }
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error al verificar estado de cancelación:', error);
+    throw error;
+  }
+};
+
+// Rechazar una solicitud de cancelación
+export const rejectCancelRequest = async (sellDetailStatusId) => {
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+
+    const response = await fetch(`${baseURL}/sell-detail-status/${sellDetailStatusId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'accept': '*/*'
+      },
+      body: JSON.stringify({
+        status: 'REJECTED'
+      }),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error al rechazar solicitud de cancelación:', error);
+    throw error;
+  }
+};

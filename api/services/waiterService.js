@@ -138,4 +138,110 @@ export const assignWaiterToTable = async (positionSiteId, userId) => {
     console.error('Error al asignar mesero a la mesa:', error);
     throw error;
   }
+};
+
+/**
+ * Verifica los detalles de venta pendientes
+ * @returns {Promise} Promesa con la respuesta del servidor
+ */
+export const checkPendingSellDetails = async () => {
+  try {
+    const token = await getAuthToken();
+    
+    // Verificar si existe un token válido
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+    
+    console.log(`Realizando petición a: ${baseURL}/sell-detail-status/pending`);
+    
+    const response = await fetch(`${baseURL}/sell-detail-status/pending`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    console.log(`Estado de la respuesta: ${response.status} ${response.statusText}`);
+    
+    // Obtener el texto de la respuesta
+    const responseText = await response.text();
+    console.log("Respuesta completa (texto):", responseText);
+    
+    // Intentar analizar como JSON solo si hay contenido
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+        console.log("Respuesta analizada como JSON:", data);
+      } catch (parseError) {
+        console.error("Error al analizar JSON:", parseError);
+        throw new Error(`Error al analizar JSON: ${parseError.message}. Respuesta: ${responseText}`);
+      }
+    } else {
+      console.log("La respuesta está vacía");
+      data = { result: null };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error al verificar detalles de venta pendientes:', error);
+    throw error;
+  }
+};
+
+/**
+ * Actualiza el estado de un detalle de venta
+ * @param {number} sellDetailStatusId - ID del estado del detalle de venta
+ * @param {string} status - Nuevo estado (ACCEPTED o REJECTED)
+ * @returns {Promise} Promesa con la respuesta del servidor
+ */
+export const updateSellDetailStatus = async (sellDetailStatusId, status) => {
+  try {
+    const token = await getAuthToken();
+    
+    // Verificar si existe un token válido
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+    
+    console.log(`Realizando petición a: ${baseURL}/sell-detail-status/${sellDetailStatusId}`);
+    console.log("Estado a actualizar:", status);
+    
+    const response = await fetch(`${baseURL}/sell-detail-status/${sellDetailStatusId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ status })
+    });
+
+    console.log(`Estado de la respuesta: ${response.status} ${response.statusText}`);
+    
+    // Obtener el texto de la respuesta
+    const responseText = await response.text();
+    console.log("Respuesta completa (texto):", responseText);
+    
+    // Intentar analizar como JSON solo si hay contenido
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+        console.log("Respuesta analizada como JSON:", data);
+      } catch (parseError) {
+        console.error("Error al analizar JSON:", parseError);
+        throw new Error(`Error al analizar JSON: ${parseError.message}. Respuesta: ${responseText}`);
+      }
+    } else {
+      console.log("La respuesta está vacía");
+      data = { result: null };
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error al actualizar el estado del detalle de venta:', error);
+    throw error;
+  }
 }; 

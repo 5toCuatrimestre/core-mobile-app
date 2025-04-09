@@ -205,36 +205,21 @@ export default function CreateCount() {
         return;
       }
 
-      const nuevaCantidad = producto.cantidad - 1;
-      console.log("Intentando disminuir cantidad:");
-      console.log("- Producto:", producto);
-      console.log("- sellDetailId:", producto.sellDetailId);
-      console.log("- sellId:", sellId);
-      console.log("- productId:", id);
-      console.log("- nuevaCantidad:", nuevaCantidad);
-
-      const response = await updateSellDetail(
-        producto.sellDetailId,
-        sellId,
-        parseInt(id),
-        nuevaCantidad
-      );
-
-      console.log("Respuesta de updateSellDetail:", response);
-
-      if (response.type === "SUCCESS") {
-        ToastAndroid.show("Cantidad disminuida exitosamente", ToastAndroid.SHORT);
-        console.log("Actualización exitosa, recargando detalles...");
-        await cargarDetallesVenta(sellId);
-      } else {
-        throw new Error(response.text || "Error al actualizar la cantidad");
-      }
+      // Navegar a la vista de cancelación
+      router.push({
+        pathname: "/waiter/CancelProduct",
+        params: {
+          sellDetailId: producto.sellDetailId,
+          positionSiteId: positionSiteId,
+          name: producto.nombre,
+          nameWaiter: "Isaac", // Aquí deberías obtener el nombre del mesero actual
+          quantity: producto.cantidad, // Enviar la cantidad real del producto
+          totalPlatillos: producto.cantidad // Enviar el total de platillos
+        }
+      });
     } catch (error) {
-      console.error("Error al disminuir cantidad:", error);
-      Alert.alert(
-        "Error",
-        "No se pudo actualizar la cantidad: " + error.message
-      );
+      console.error("Error al procesar la cancelación:", error);
+      ToastAndroid.show("Error al procesar la cancelación", ToastAndroid.SHORT);
     } finally {
       setIsProcessing(false);
     }

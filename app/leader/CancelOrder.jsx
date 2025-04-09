@@ -1,49 +1,72 @@
 import React, { useContext, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, ToastAndroid } from "react-native";
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, Alert, Platform, ToastAndroid } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
+import { updateSellDetailStatus } from "../../api/services/waiterService";
 
 export default function CancelOrder() {
-  const { mesa } = useLocalSearchParams();
+  const params = useLocalSearchParams();
   const router = useRouter();
   const { style } = useContext(StyleContext);
-  const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  // Lista de productos a cancelar
-  const productos = [
-    {
-      id: "1",
-      nombre: "Arroz",
-      descripcion: "El pedido quiere ser cancelado",
-      imagen: "https://cdn-icons-png.flaticon.com/512/3075/3075977.png",
-    },
-    {
-      id: "2",
-      nombre: "Hamburguesa",
-      descripcion: "El pedido quiere ser cancelado",
-      imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png",
-    },
-  ];
-
-  const handleAutorizar = () => {
-    setProcessing(true);
-    ToastAndroid.show("Autorizando cancelación...", ToastAndroid.SHORT);
-    setTimeout(() => {
-      ToastAndroid.show("Cancelación autorizada exitosamente", ToastAndroid.SHORT);
-      setProcessing(false);
-      router.push("/leader/dashboard");
-    }, 1500);
+  const showMessage = (message) => {
+    if (Platform.OS === 'web') {
+      Alert.alert(message);
+    } else {
+      // ToastAndroid.show(message, ToastAndroid.SHORT);
+      Alert.alert('', message);
+    }
   };
 
-  const handleDenegar = () => {
-    setProcessing(true);
-    ToastAndroid.show("Denegando cancelación...", ToastAndroid.SHORT);
-    setTimeout(() => {
-      ToastAndroid.show("Cancelación denegada", ToastAndroid.SHORT);
+  const handleAutorizar = async () => {
+    try {
+      setProcessing(true);
+      // ToastAndroid.show("Autorizando cancelación...", ToastAndroid.SHORT);
+      showMessage("Autorizando cancelación...");
+      
+      const response = await updateSellDetailStatus(params.sellDetailStatusId, "ACCEPTED");
+      
+      if (response && response.type === "SUCCESS") {
+        // ToastAndroid.show("Cancelación autorizada exitosamente", ToastAndroid.SHORT);
+        showMessage("Cancelación autorizada exitosamente");
+        router.back();
+      } else {
+        // ToastAndroid.show(response?.text || "Error al autorizar la cancelación", ToastAndroid.SHORT);
+        showMessage(response?.text || "Error al autorizar la cancelación");
+      }
+    } catch (error) {
+      console.error("Error al autorizar:", error);
+      // ToastAndroid.show("Error al autorizar la cancelación", ToastAndroid.SHORT);
+      showMessage("Error al autorizar la cancelación");
+    } finally {
       setProcessing(false);
-      router.push("/leader/dashboard");
-    }, 1500);
+    }
+  };
+
+  const handleDenegar = async () => {
+    try {
+      setProcessing(true);
+      // ToastAndroid.show("Denegando cancelación...", ToastAndroid.SHORT);
+      showMessage("Denegando cancelación...");
+      
+      const response = await updateSellDetailStatus(params.sellDetailStatusId, "REJECTED");
+      
+      if (response && response.type === "SUCCESS") {
+        // ToastAndroid.show("Cancelación denegada", ToastAndroid.SHORT);
+        showMessage("Cancelación denegada");
+        router.back();
+      } else {
+        // ToastAndroid.show(response?.text || "Error al denegar la cancelación", ToastAndroid.SHORT);
+        showMessage(response?.text || "Error al denegar la cancelación");
+      }
+    } catch (error) {
+      console.error("Error al denegar:", error);
+      // ToastAndroid.show("Error al denegar la cancelación", ToastAndroid.SHORT);
+      showMessage("Error al denegar la cancelación");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
@@ -58,32 +81,36 @@ export default function CancelOrder() {
 
       {/* Barra de título */}
       <Text className="text-xl font-bold mb-1 text-center" style={{ color: style.H2 }}>
-        {mesa}
+        Mesa #{params.positionSiteId}
       </Text>
       <Text className="text-lg font-semibold mb-4 text-center" style={{ color: style.H3 }}>
-        Cancelación de Productos
+        Cancelación de {params.name}
       </Text>
 
-      {/* Lista de productos */}
-      <FlatList
-        data={productos}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+      {/* Detalles del producto */}
           <View
             className="flex-row items-center p-3 rounded-lg mb-2 shadow-sm"
             style={{ backgroundColor: style.BgCard }}
           >
             <Image
-              source={{ uri: item.imagen }}
+          source={{ uri: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" }}
               className="w-10 h-10 rounded-full mr-4"
             />
-            <View>
-              <Text className="text-lg font-semibold" style={{ color: style.H2 }}>{item.nombre}</Text>
-              <Text style={{ color: style.H3 }}>{item.descripcion}</Text>
+        <View className="flex-1">
+          <Text className="text-lg font-semibold" style={{ color: style.H2 }}>
+            {params.name}
+          </Text>
+          <Text style={{ color: style.H3 }}>
+            Cantidad: {params.quantity}
+          </Text>
+          <Text style={{ color: style.H3 }}>
+            Mesero: {params.nameWaiter}
+          </Text>
+          <Text style={{ color: style.H3 }}>
+            Estado: {params.status}
+          </Text>
             </View>
           </View>
-        )}
-      />
 
       {/* Botones de acción */}
       <View className="mt-4">
@@ -93,16 +120,20 @@ export default function CancelOrder() {
           style={{ backgroundColor: style.BgButton }}
           disabled={processing}
         >
-          <Text className="font-semibold" style={{ color: style.P }}>Autorizar cancelación</Text>
+          <Text className="font-semibold" style={{ color: style.P }}>
+            {processing ? "Procesando..." : "Autorizar cancelación"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           className="p-3 rounded-lg items-center"
           onPress={handleDenegar}
-          style={{ backgroundColor: "#E53935" }}
+          style={{ backgroundColor: "#E53935" }} 
           disabled={processing}
         >
-          <Text className="font-semibold text-white">Denegar cancelación</Text>
+          <Text className="font-semibold text-white">
+            {processing ? "Procesando..." : "Denegar cancelación"}
+          </Text>
         </TouchableOpacity>
       </View>
 
