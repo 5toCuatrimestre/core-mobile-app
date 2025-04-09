@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator, Alert, ToastAndroid } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
 import { getMenu } from "../../api/services/menuService";
@@ -13,6 +13,7 @@ export default function MenuPlatillos({ onAgregarPlatillo }) {
   const [platillos, setPlatillos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const cargarMenu = async () => {
@@ -57,6 +58,7 @@ export default function MenuPlatillos({ onAgregarPlatillo }) {
   // Función para agregar platillo a la cuenta
   const agregarPlatillo = async (platillo) => {
     try {
+      setIsProcessing(true);
       // Verificar si tenemos el ID de la venta
       if (!params.sellId) {
         throw new Error("No se proporcionó el ID de la venta");
@@ -92,8 +94,9 @@ export default function MenuPlatillos({ onAgregarPlatillo }) {
       }
 
       if (response.type === "SUCCESS") {
-        // Si la operación fue exitosa, proceder con la navegación
-        router.back();
+        ToastAndroid.show("Platillo agregado exitosamente", ToastAndroid.SHORT);
+        // Eliminar la navegación de regreso
+        // router.back();
         router.setParams({ 
           platilloId: platillo.id,
           platilloNombre: platillo.nombre,
@@ -110,6 +113,8 @@ export default function MenuPlatillos({ onAgregarPlatillo }) {
         "Error",
         "No se pudo agregar el producto a la cuenta: " + error.message
       );
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -208,6 +213,12 @@ export default function MenuPlatillos({ onAgregarPlatillo }) {
         </ScrollView>
       )}
 
+      {isProcessing && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      )}
+
       <TouchableOpacity
         className="p-3 rounded-lg items-center"
         style={{ backgroundColor: "#1e88e5" }}
@@ -218,3 +229,17 @@ export default function MenuPlatillos({ onAgregarPlatillo }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
+  },
+});

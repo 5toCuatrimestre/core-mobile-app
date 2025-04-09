@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,   
   RefreshControl,
+  ToastAndroid
 } from "react-native";
 import { useRouter, useLocalSearchParams, Stack } from "expo-router";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -77,6 +78,7 @@ export default function AssignWaiter() {
     } catch (error) {
       console.error("Error al cargar datos:", error);
       setError("Error al cargar los datos. Por favor, inténtalo de nuevo.");
+      ToastAndroid.show("Error al cargar los datos", ToastAndroid.SHORT);
     } finally {
       setLoading(false);
     }
@@ -119,11 +121,8 @@ export default function AssignWaiter() {
         const response = await updateTableUser(tableUser.id, 1, params.tableId, userId);
         
         if (response && response.type === "SUCCESS") {
-          Alert.alert(
-            "Éxito",
-            `Mesero ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
-            [{ text: "OK", onPress: () => router.back() }]
-          );
+          ToastAndroid.show(`Mesero ${waiter.name} asignado correctamente`, ToastAndroid.SHORT);
+          router.back();
         } else {
           throw new Error("Error al actualizar el mesero asignado a la mesa");
         }
@@ -132,18 +131,15 @@ export default function AssignWaiter() {
         const response = await assignWaiterToTable(params.tableId, userId);
         
         if (response && response.type === "SUCCESS") {
-          Alert.alert(
-            "Éxito",
-            `Mesero ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
-            [{ text: "OK", onPress: () => router.back() }]
-          );
+          ToastAndroid.show(`Mesero ${waiter.name} asignado correctamente`, ToastAndroid.SHORT);
+          router.back();
         } else {
           throw new Error("Error al asignar el mesero a la mesa");
         }
       }
     } catch (error) {
       console.error("Error al asignar mesero:", error);
-      Alert.alert("Error", "No se pudo asignar el mesero a la mesa. Por favor, inténtalo de nuevo.");
+      ToastAndroid.show("No se pudo asignar el mesero a la mesa", ToastAndroid.SHORT);
     } finally {
       setIsAssigning(false);
     }
@@ -169,11 +165,8 @@ export default function AssignWaiter() {
         const response = await updateTableUser(tableUser.id, 1, params.tableId, userId);
         
         if (response && response.type === "SUCCESS") {
-          Alert.alert(
-            "Éxito",
-            `Usuario ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
-            [{ text: "OK", onPress: () => router.back() }]
-          );
+          ToastAndroid.show(`Usuario ${waiter.name} asignado correctamente`, ToastAndroid.SHORT);
+          router.back();
         } else {
           throw new Error("Error al actualizar el usuario asignado a la mesa");
         }
@@ -182,18 +175,15 @@ export default function AssignWaiter() {
         const response = await assignUserToTable(1, params.tableId, userId);
         
         if (response && response.type === "SUCCESS") {
-          Alert.alert(
-            "Éxito",
-            `Usuario ${waiter.name} ${waiter.lastName} asignado a la mesa correctamente.`,
-            [{ text: "OK", onPress: () => router.back() }]
-          );
+          ToastAndroid.show(`Usuario ${waiter.name} asignado correctamente`, ToastAndroid.SHORT);
+          router.back();
         } else {
           throw new Error("Error al asignar el usuario a la mesa");
         }
       }
     } catch (error) {
       console.error("Error al asignar usuario:", error);
-      Alert.alert("Error", "No se pudo asignar el usuario a la mesa. Por favor, inténtalo de nuevo.");
+      ToastAndroid.show("No se pudo asignar el usuario a la mesa", ToastAndroid.SHORT);
     } finally {
       setIsAssigning(false);
     }
@@ -246,7 +236,7 @@ export default function AssignWaiter() {
 
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={style.H1} />
+            <ActivityIndicator size="large" color="#ffffff" />
             <Text style={[styles.loadingText, { color: style.H1 }]}>Cargando meseros disponibles...</Text>
           </View>
         ) : error ? (
@@ -326,6 +316,12 @@ export default function AssignWaiter() {
             </View>
           </>
         )}
+        
+        {isAssigning && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#ffffff" />
+          </View>
+        )}
       </View>
     </>
   );
@@ -371,6 +367,17 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
   },
   errorContainer: {
     flex: 1,

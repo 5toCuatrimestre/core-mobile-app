@@ -1,9 +1,8 @@
 import React, { useState, useContext, useEffect, useLayoutEffect } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
-import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
+import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator, ToastAndroid, Alert } from "react-native";
+import { useRouter, useLocalSearchParams, useNavigation, useFocusEffect } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
-import { Alert } from "react-native";
-import { findPositionSell, createPositionSell, getSellDetails, updateSellDetail } from "../../api/services/forWaiter";
+import { findPositionSell, createPositionSell, getSellDetails, updateSellDetail, cancelSell } from "../../api/services/forWaiter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function CreateCount() {
@@ -19,6 +18,8 @@ export default function CreateCount() {
   const [userId, setUserId] = useState(null);
   const [positionSiteId, setPositionSiteId] = useState(null);
   const [productos, setProductos] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [sellCreated, setSellCreated] = useState(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({ title: "Crear cuenta" });
@@ -64,7 +65,6 @@ export default function CreateCount() {
         setLoading(true);
         setError(null);
         
-        // Obtener el ID del usuario
         const storedUserId = await AsyncStorage.getItem("user_id");
         if (!storedUserId) {
           throw new Error("No se encontró el ID del usuario");
@@ -74,7 +74,6 @@ export default function CreateCount() {
         setUserId(currentUserId);
         console.log("ID del usuario obtenido:", currentUserId);
         
-        // Obtener el ID de la posición desde los parámetros
         if (!params.id) {
           throw new Error("No se proporcionó el ID de la posición");
         }
@@ -83,35 +82,22 @@ export default function CreateCount() {
         setPositionSiteId(currentPositionSiteId);
         console.log("ID de la posición obtenido:", currentPositionSiteId);
         
-        // Buscar una cuenta existente para esta posición
         const sellResponse = await findPositionSell(currentPositionSiteId);
         console.log("Respuesta de búsqueda de cuenta por posición:", sellResponse);
         
-        let currentSellId;
-        
         if (sellResponse.type === "SUCCESS" && sellResponse.result && sellResponse.result.length > 0) {
-          // Usar la cuenta existente
           const existingSell = sellResponse.result[0];
-          currentSellId = existingSell.sellId;
-          setSellId(currentSellId);
+          setSellId(existingSell.sellId);
+          setSellCreated(true);
           console.log("Cuenta existente encontrada:", existingSell);
         } else {
-          // Crear una nueva cuenta para esta posición
-          const createResponse = await createPositionSell(currentUserId, currentPositionSiteId);
-          console.log("Respuesta de creación de cuenta por posición:", createResponse);
-          
-          if (createResponse.type === "SUCCESS" && createResponse.result) {
-            currentSellId = createResponse.result.sellId;
-            setSellId(currentSellId);
-            console.log("Nueva cuenta creada:", createResponse.result);
-          } else {
-            throw new Error("No se pudo crear una nueva cuenta");
-          }
+          setSellCreated(false);
+          console.log("No se encontró una cuenta existente para esta posición");
         }
         
         // Cargar los detalles de la venta
-        if (currentSellId) {
-          await cargarDetallesVenta(currentSellId);
+        if (sellId) {
+          await cargarDetallesVenta(sellId);
         }
       } catch (error) {
         console.error("Error al inicializar la cuenta:", error);
@@ -133,12 +119,24 @@ export default function CreateCount() {
     }
   }, [params.platilloId]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      if (sellId) {
+        setIsProcessing(true);
+        cargarDetallesVenta(sellId).finally(() => {
+          setIsProcessing(false);
+        });
+      }
+    }, [sellId])
+  );
+
   const productosFiltrados = productos.filter((producto) =>
     producto.nombre.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const aumentarCantidad = async (id) => {
     try {
+      setIsProcessing(true);
       const producto = productos.find(p => p.id === id);
       if (!producto) {
         console.error("Producto no encontrado:", id);
@@ -168,6 +166,7 @@ export default function CreateCount() {
       console.log("Respuesta de updateSellDetail:", response);
 
       if (response.type === "SUCCESS") {
+        ToastAndroid.show("Cantidad aumentada exitosamente", ToastAndroid.SHORT);
         console.log("Actualización exitosa, recargando detalles...");
         await cargarDetallesVenta(sellId);
       } else {
@@ -179,11 +178,14 @@ export default function CreateCount() {
         "Error",
         "No se pudo actualizar la cantidad: " + error.message
       );
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const disminuirCantidad = async (id) => {
     try {
+      setIsProcessing(true);
       const producto = productos.find(p => p.id === id);
       if (!producto) {
         console.error("Producto no encontrado:", id);
@@ -218,6 +220,7 @@ export default function CreateCount() {
       console.log("Respuesta de updateSellDetail:", response);
 
       if (response.type === "SUCCESS") {
+        ToastAndroid.show("Cantidad disminuida exitosamente", ToastAndroid.SHORT);
         console.log("Actualización exitosa, recargando detalles...");
         await cargarDetallesVenta(sellId);
       } else {
@@ -229,10 +232,46 @@ export default function CreateCount() {
         "Error",
         "No se pudo actualizar la cantidad: " + error.message
       );
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const total = productos.reduce((sum, producto) => sum + (producto.precio * producto.cantidad), 0);
+
+  const handleCreateSell = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const createResponse = await createPositionSell(userId, positionSiteId);
+      if (createResponse.type === "SUCCESS" && createResponse.result) {
+        setSellId(createResponse.result.sellId);
+        setSellCreated(true);
+        ToastAndroid.show("Cuenta creada exitosamente", ToastAndroid.SHORT);
+      } else {
+        throw new Error("No se pudo crear una nueva cuenta");
+      }
+    } catch (error) {
+      setError("Error al crear la cuenta: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelSell = async () => {
+    try {
+      if (!sellId) return;
+      const cancelResponse = await cancelSell(sellId);
+      if (cancelResponse.type === "SUCCESS") {
+        ToastAndroid.show("Cuenta cerrada exitosamente", ToastAndroid.SHORT);
+        router.back();
+      } else {
+        throw new Error("No se pudo cancelar la cuenta");
+      }
+    } catch (error) {
+      Alert.alert("Error", "No se pudo cancelar la cuenta: " + error.message);
+    }
+  };
 
   // Mostrar indicador de carga
   if (loading) {
@@ -267,30 +306,32 @@ export default function CreateCount() {
 
   return (
     <View className="flex-1 p-4" style={{ backgroundColor: style.BgInterface }}>
-      <View className="mb-4 relative">
-        <TextInput
-          className="p-3 pl-10 border rounded-full"
-          placeholder="Search here"
-          placeholderTextColor="#888"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          style={{ 
-            backgroundColor: "#f5f5f5", 
-            borderColor: style.BgButton,
-            color: "#333" 
-          }}
-        />
-        <TouchableOpacity 
-          className="absolute right-2 top-2 bg-blue-500 w-8 h-8 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: "#1e88e5" }}
-          onPress={() => router.push({
-            pathname: "/waiter/MenuPlatillos",
-            params: { sellId: sellId }
-          })}
-        >
-          <Text className="text-white text-xl">+</Text>
-        </TouchableOpacity>
-      </View>
+      {sellCreated && (
+        <View className="mb-4 relative">
+          <TextInput
+            className="p-3 pl-10 border rounded-full"
+            placeholder="Search here"
+            placeholderTextColor="#888"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{ 
+              backgroundColor: "#f5f5f5", 
+              borderColor: style.BgButton,
+              color: "#333" 
+            }}
+          />
+          <TouchableOpacity 
+            className="absolute right-2 top-2 bg-blue-500 w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "#1e88e5" }}
+            onPress={() => router.push({
+              pathname: "/waiter/MenuPlatillos",
+              params: { sellId: sellId }
+            })}
+          >
+            <Text className="text-white text-xl">+</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView className="flex-1 mb-4">
   {productosFiltrados.map((producto) => (
@@ -331,21 +372,52 @@ export default function CreateCount() {
   ))}
 </ScrollView>
 
-      <View className="mb-4 p-3 rounded-lg" style={{ backgroundColor: style.BgCard || "#ffffff" }}>
-        <Text className="text-lg font-bold" style={{ color: style.H2 || "#333" }}>Total: ${total.toFixed(2)}</Text>
-      </View>
+      {sellCreated && (
+        <View className="mb-4 p-3 rounded-lg" style={{ backgroundColor: style.BgCard || "#ffffff" }}>
+          <Text className="text-lg font-bold" style={{ color: style.H2 || "#333" }}>Total: ${total.toFixed(2)}</Text>
+        </View>
+      )}
 
-      <TouchableOpacity
-  className="p-3 rounded-lg items-center"
-  style={{ backgroundColor: "#1e88e5" }}
-  onPress={() => {
-    Alert.alert("Cuenta creada", "La cuenta se ha creado exitosamente.", [
-      { text: "OK", onPress: () => router.back() }
-    ]);
-  }}
->
-  <Text className="font-semibold text-white">Terminar</Text>
-</TouchableOpacity>
+      {!sellCreated && (
+        <TouchableOpacity
+          className="p-3 rounded-lg items-center"
+          style={{ backgroundColor: "#1e88e5" }}
+          onPress={handleCreateSell}
+        >
+          <Text className="font-semibold text-white">Crear Cuenta</Text>
+        </TouchableOpacity>
+      )}
+
+      {sellCreated && (
+        <TouchableOpacity
+          className="p-3 rounded-lg items-center"
+          style={{ backgroundColor: "#e53935" }}
+          onPress={() => {
+            Alert.alert(
+              "¿Estás seguro de cerrar la cuenta?",
+              "Esta acción no se puede deshacer.",
+              [
+                {
+                  text: "Cancelar",
+                  style: "cancel"
+                },
+                {
+                  text: "Cerrar cuenta",
+                  onPress: handleCancelSell
+                }
+              ]
+            );
+          }}
+        >
+          <Text className="font-semibold text-white">Cerrar Cuenta</Text>
+        </TouchableOpacity>
+      )}
+
+      {isProcessing && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      )}
 
     </View>
   );
@@ -381,5 +453,16 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: 16,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
   },
 });

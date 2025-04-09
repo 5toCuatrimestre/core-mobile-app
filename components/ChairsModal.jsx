@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { View, Modal, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from "react-native";
+import { View, Modal, Text, TextInput, Button, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, ToastAndroid } from "react-native";
 import { createTable } from "../api/services/tableService";
 import { StyleContext } from "../utils/StyleContext"; // Importamos el contexto de estilos
 
@@ -31,6 +31,7 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
     }
 
     setIsCreating(true);
+    ToastAndroid.show("Creando mesa...", ToastAndroid.SHORT);
     try {
       // Convertimos las coordenadas de la cuadrícula a decimales (0-1) para el servidor
       const xlocation = Math.max(0, Math.min(1, gridX / 100));
@@ -71,7 +72,7 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
           });
         }
         
-        Alert.alert("Éxito", "Mesa creada correctamente");
+        ToastAndroid.show("Mesa creada correctamente", ToastAndroid.SHORT);
         onCancel(); // Cerramos el modal
       } else {
         console.error("ChairsModal: Error en la respuesta del servidor", response);
@@ -108,9 +109,8 @@ const ChairsModal = ({ visible, chairs, setChairs, onCancel, positionSiteId, gri
             editable={!isCreating}
           />
           {isCreating ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={style.H1} />
-              <Text style={[styles.loadingText, { color: style.H1 }]}>Creando mesa...</Text>
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#ffffff" />
             </View>
           ) : (
             <View style={styles.buttonContainer}>
@@ -160,15 +160,17 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     textAlign: "center",
   },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-  },
-  loadingText: {
-    marginLeft: 10,
-    fontSize: 16,
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
+    borderRadius: 10,
   },
   buttonContainer: {
     flexDirection: "row",

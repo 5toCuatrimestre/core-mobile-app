@@ -175,9 +175,8 @@ export default function Areas() {
       <View ref={canvasRef} style={[styles.canvas, { backgroundColor: style.BgCard }]}>
         {/* Indicador de carga */}
         {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={style.H1} />
-            <Text style={[styles.loadingText, { color: style.P }]}>Cargando áreas asignadas...</Text>
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#ffffff" />
           </View>
         )}
 
@@ -300,20 +299,16 @@ const styles = StyleSheet.create({
   activeTable: {
     // Color para mesas activas
   },
-  loadingContainer: {
-    position: "absolute",
+  loadingOverlay: {
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    zIndex: 10,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
   },
   errorContainer: {
     position: "absolute",

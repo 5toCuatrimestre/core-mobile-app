@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, Image } from "react-native";
+import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ActivityIndicator, ToastAndroid } from "react-native";
 import { useRouter } from "expo-router";
 import { Routes } from "../../../utils/routes";
 import { StyleContext } from "../../../utils/StyleContext";
@@ -7,6 +7,7 @@ import { StyleContext } from "../../../utils/StyleContext";
 export default function Dashboard() {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
   const { style } = useContext(StyleContext);
 
   // Lista de meseros
@@ -23,6 +24,12 @@ export default function Dashboard() {
   const filteredMeseros = meseros.filter((m) =>
     m.nombre.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleMeseroPress = (mesa) => {
+    setLoading(true);
+    router.push({ pathname: "/leader/CancelOrder", params: { mesa: mesa } });
+    setTimeout(() => setLoading(false), 500);
+  };
 
   return (
     <View className="flex-1 p-4" style={{ backgroundColor: style.BgInterface }}>
@@ -42,7 +49,7 @@ export default function Dashboard() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => router.push({ pathname: "/leader/CancelOrder", params: { mesa: item.mesa } })}
+            onPress={() => handleMeseroPress(item.mesa)}
             className="flex-row items-center p-3 rounded-lg mb-2 shadow-sm"
             style={{ backgroundColor: style.BgCard }}
           >
@@ -57,6 +64,26 @@ export default function Dashboard() {
           </TouchableOpacity>
         )}
       />
+
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      )}
     </View>
   );
 }
+
+const styles = {
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
+  },
+};

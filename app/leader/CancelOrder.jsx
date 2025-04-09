@@ -1,5 +1,5 @@
-import React, { useContext } from "react";
-import { View, Text, FlatList, TouchableOpacity, Image } from "react-native";
+import React, { useContext, useState } from "react";
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, ToastAndroid } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
 
@@ -7,6 +7,8 @@ export default function CancelOrder() {
   const { mesa } = useLocalSearchParams();
   const router = useRouter();
   const { style } = useContext(StyleContext);
+  const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   // Lista de productos a cancelar
   const productos = [
@@ -23,6 +25,26 @@ export default function CancelOrder() {
       imagen: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png",
     },
   ];
+
+  const handleAutorizar = () => {
+    setProcessing(true);
+    ToastAndroid.show("Autorizando cancelación...", ToastAndroid.SHORT);
+    setTimeout(() => {
+      ToastAndroid.show("Cancelación autorizada exitosamente", ToastAndroid.SHORT);
+      setProcessing(false);
+      router.push("/leader/dashboard");
+    }, 1500);
+  };
+
+  const handleDenegar = () => {
+    setProcessing(true);
+    ToastAndroid.show("Denegando cancelación...", ToastAndroid.SHORT);
+    setTimeout(() => {
+      ToastAndroid.show("Cancelación denegada", ToastAndroid.SHORT);
+      setProcessing(false);
+      router.push("/leader/dashboard");
+    }, 1500);
+  };
 
   return (
     <View className="flex-1 p-4" style={{ backgroundColor: style.BgInterface }}>
@@ -67,20 +89,42 @@ export default function CancelOrder() {
       <View className="mt-4">
         <TouchableOpacity
           className="p-3 rounded-lg items-center mb-2"
-          onPress={() => router.push("/leader/dashboard")} 
+          onPress={handleAutorizar} 
           style={{ backgroundColor: style.BgButton }}
+          disabled={processing}
         >
           <Text className="font-semibold" style={{ color: style.P }}>Autorizar cancelación</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           className="p-3 rounded-lg items-center"
-          onPress={() => router.push("/leader/dashboard")}
-          style={{ backgroundColor: "#E53935" }} 
+          onPress={handleDenegar}
+          style={{ backgroundColor: "#E53935" }}
+          disabled={processing}
         >
           <Text className="font-semibold text-white">Denegar cancelación</Text>
         </TouchableOpacity>
       </View>
+
+      {processing && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      )}
     </View>
   );
 }
+
+const styles = {
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
+  },
+};
