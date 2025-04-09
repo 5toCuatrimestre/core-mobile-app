@@ -1,9 +1,12 @@
 import React, { useState, useContext, useEffect, useLayoutEffect } from "react";
-import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator, ToastAndroid, Alert } from "react-native";
+import { View, Text, TextInput, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet, ActivityIndicator, ToastAndroid, Alert, Linking } from "react-native";
 import { useRouter, useLocalSearchParams, useNavigation, useFocusEffect } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
 import { findPositionSell, createPositionSell, getSellDetails, updateSellDetail, cancelSell } from "../../api/services/forWaiter";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { webUrl } from "../../api/authApi";
+
+// URL para la aplicación web
 
 export default function CreateCount() {
   const router = useRouter();
@@ -264,6 +267,20 @@ export default function CreateCount() {
       const cancelResponse = await cancelSell(sellId);
       if (cancelResponse.type === "SUCCESS") {
         ToastAndroid.show("Cuenta cerrada exitosamente", ToastAndroid.SHORT);
+        
+        // Redireccionar a la URL del ticket en el navegador
+        const ticketUrl = `${webUrl}ticket/${sellId}`;
+        console.log("Abriendo ticket en navegador:", ticketUrl);
+        
+        // Abrir la URL en el navegador del dispositivo
+        const canOpen = await Linking.canOpenURL(ticketUrl);
+        if (canOpen) {
+          await Linking.openURL(ticketUrl);
+        } else {
+          ToastAndroid.show("No se pudo abrir el navegador", ToastAndroid.SHORT);
+        }
+        
+        // Volver a la pantalla anterior
         router.back();
       } else {
         throw new Error("No se pudo cancelar la cuenta");
@@ -279,7 +296,7 @@ export default function CreateCount() {
       <View style={[styles.container, { backgroundColor: style.BgInterface }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={style.H1} />
-          <Text style={[styles.loadingText, { color: style.P }]}>
+          <Text style={[styles.loadingText, { color: style.H1 }]}>
             Cargando cuenta...
           </Text>
         </View>
