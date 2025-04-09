@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
   TouchableOpacity,
+  ToastAndroid
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import ChairsModal from "../../../components/ChairsModal"; // 🔹 Importamos el modal externo
@@ -149,6 +150,7 @@ export default function Space() {
     } catch (error) {
       console.error("Error al cargar las mesas:", error);
       setError("Error al cargar las mesas. Por favor, inténtalo de nuevo.");
+      ToastAndroid.show("Error al cargar las mesas", ToastAndroid.SHORT);
     } finally {
       setLoading(false);
     }
@@ -189,6 +191,7 @@ export default function Space() {
       setUserDetails(userDetailsData);
     } catch (error) {
       console.error("Error al cargar usuarios de las mesas:", error);
+      ToastAndroid.show("Error al cargar usuarios de las mesas", ToastAndroid.SHORT);
     }
   };
 
@@ -314,12 +317,14 @@ export default function Space() {
       // Si la actualización fue exitosa, actualizamos el estado local
       if (response && response.result) {
         console.log(`Mesa ${tableId} actualizada en el servidor`);
+        ToastAndroid.show("Mesa actualizada correctamente", ToastAndroid.SHORT);
         return true;
       } else {
         throw new Error("Error al actualizar la mesa en el servidor");
       }
     } catch (error) {
       console.error("Error al actualizar la mesa:", error);
+      ToastAndroid.show("Error al actualizar la mesa", ToastAndroid.SHORT);
       return false;
     } finally {
       setIsUpdating(false);
@@ -537,6 +542,7 @@ export default function Space() {
           onPress: async () => {
             try {
               console.log(`Eliminando mesa con ID: ${item.id}`);
+              ToastAndroid.show("Eliminando mesa...", ToastAndroid.SHORT);
               await deleteTable(item.id);
               console.log(`Mesa ${item.id} eliminada correctamente`);
 
@@ -549,13 +555,10 @@ export default function Space() {
               setSelectedTableId(null);
 
               // Mostrar mensaje de éxito
-              Alert.alert("Éxito", "La mesa ha sido eliminada correctamente.");
+              ToastAndroid.show("Mesa eliminada correctamente", ToastAndroid.SHORT);
             } catch (error) {
               console.error("Error al eliminar la mesa:", error);
-              Alert.alert(
-                "Error",
-                "No se pudo eliminar la mesa. Por favor, inténtalo de nuevo."
-              );
+              ToastAndroid.show("Error al eliminar la mesa", ToastAndroid.SHORT);
             }
           },
           style: "destructive",
@@ -570,7 +573,7 @@ export default function Space() {
         {/* Indicador de carga */}
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FF6363" />
+            <ActivityIndicator size="large" color="#ffffff" />
             <Text style={styles.loadingText}>Cargando mesas...</Text>
           </View>
         )}
@@ -678,6 +681,13 @@ export default function Space() {
         gridY={tempCoords.gridY}
         onTableCreated={handleTableCreated}
       />
+      
+      {/* Overlay de carga para actualización de posición */}
+      {isUpdating && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#ffffff" />
+        </View>
+      )}
     </View>
   );
 }
@@ -773,13 +783,24 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     zIndex: 10,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: "#333",
+    color: "#ffffff",
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 1,
   },
   errorContainer: {
     position: "absolute",

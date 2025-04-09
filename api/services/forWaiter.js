@@ -482,3 +482,51 @@ export const updateSellDetail = async (sellDetailId, sellId, productId, quantity
     throw error;
   }
 };
+
+/**
+ * Cancela una cuenta de venta
+ * @param {number} sellId - ID de la venta
+ * @returns {Promise} - Promesa con la respuesta del servidor
+ */
+export const cancelSell = async (sellId) => {
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error("No hay token de autenticación disponible");
+    }
+
+    console.log(`Cancelando la venta con ID: ${sellId}`);
+    const response = await fetch(`${baseURL}/sell/status/${sellId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "Accept": "*/*"
+      },
+      body: JSON.stringify({
+        status: false
+      })
+    });
+
+    console.log(`Estado de la respuesta: ${response.status} ${response.statusText}`);
+    const responseText = await response.text();
+    console.log("Respuesta completa (texto):", responseText);
+
+    let data;
+    if (responseText && responseText.trim()) {
+      try {
+        data = JSON.parse(responseText);
+        console.log("Respuesta analizada como JSON:", data);
+        return data;
+      } catch (parseError) {
+        console.error("Error al analizar JSON:", parseError);
+        throw new Error(`Error al analizar JSON: ${parseError.message}. Respuesta: ${responseText}`);
+      }
+    }
+
+    return { type: "ERROR", text: "Respuesta vacía", result: null };
+  } catch (error) {
+    console.error("Error al cancelar la venta:", error);
+    throw error;
+  }
+};

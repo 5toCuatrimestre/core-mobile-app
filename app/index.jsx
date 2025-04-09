@@ -89,25 +89,6 @@ export default function AuthScreen() {
           />
         </View>
 
-        {/* Recordar Sesión y Olvidar Contraseña */}
-        <View className="flex-row justify-between items-center mb-4">
-          <TouchableOpacity
-            onPress={() => setRemember(!remember)}
-            className="flex-row items-center"
-          >
-            <Checkbox
-              status={remember ? "checked" : "unchecked"}
-              color={style.BgButton}
-            />
-            <Text className="ml-2" style={{ color: style.H3 }}>
-              Recordarme
-            </Text>
-          </TouchableOpacity>
-          <Text className="text-sm" style={{ color: style.H3 }}>
-            ¿Olvidaste tu contraseña?
-          </Text>
-        </View>
-
         {/* Botón de Login */}
         <TouchableOpacity
           onPress={handleLogin}
@@ -118,7 +99,7 @@ export default function AuthScreen() {
             className="text-center font-semibold"
             style={{ color: style.P }}
           >
-            Iniciar sesión
+            Entrar
           </Text>
         </TouchableOpacity>
       </View>
