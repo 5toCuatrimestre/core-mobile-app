@@ -486,17 +486,23 @@ export const updateSellDetail = async (sellDetailId, sellId, productId, quantity
 /**
  * Cancela una cuenta de venta
  * @param {number} sellId - ID de la venta
+ * @param {number} totalPrice - Precio total de la venta
  * @returns {Promise} - Promesa con la respuesta del servidor
  */
-export const cancelSell = async (sellId) => {
+export const cancelSell = async (sellId, totalPrice) => {
   try {
     const token = await getAuthToken();
     if (!token) {
       throw new Error("No hay token de autenticación disponible");
     }
 
-    console.log(`Cancelando la venta con ID: ${sellId}`);
-    const response = await fetch(`${baseURL}/sell/status/${sellId}`, {
+    // Obtener la fecha y hora actual
+    const now = new Date();
+    const sellDate = now.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    const sellTime = now.toTimeString().split(' ')[0]; // Formato HH:MM:SS
+
+    console.log(`Cancelando la venta con ID: ${sellId} y precio total: ${totalPrice}`);
+    const response = await fetch(`${baseURL}/sell/${sellId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -504,7 +510,10 @@ export const cancelSell = async (sellId) => {
         "Accept": "*/*"
       },
       body: JSON.stringify({
-        status: false
+        sellDate: sellDate,
+        sellTime: sellTime,
+        status: false,
+        totalPrice: totalPrice
       })
     });
 

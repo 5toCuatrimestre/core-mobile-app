@@ -251,7 +251,8 @@ export default function CreateCount() {
   const handleCancelSell = async () => {
     try {
       if (!sellId) return;
-      const cancelResponse = await cancelSell(sellId);
+      console.log("Total:", total);
+      const cancelResponse = await cancelSell(sellId, total);
       if (cancelResponse.type === "SUCCESS") {
         ToastAndroid.show("Cuenta cerrada exitosamente", ToastAndroid.SHORT);
         
