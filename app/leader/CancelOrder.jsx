@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { View, Text, TouchableOpacity, Image, ActivityIndicator, Alert, Platform, ToastAndroid } from "react-native";
+import { View, Text, TouchableOpacity, Image, ActivityIndicator, ToastAndroid } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { StyleContext } from "../../utils/StyleContext";
 import { updateSellDetailStatus } from "../../api/services/waiterService";
@@ -10,35 +10,21 @@ export default function CancelOrder() {
   const { style } = useContext(StyleContext);
   const [processing, setProcessing] = useState(false);
 
-  const showMessage = (message) => {
-    if (Platform.OS === 'web') {
-      Alert.alert(message);
-    } else {
-      // ToastAndroid.show(message, ToastAndroid.SHORT);
-      Alert.alert('', message);
-    }
-  };
-
   const handleAutorizar = async () => {
     try {
       setProcessing(true);
-      // ToastAndroid.show("Autorizando cancelación...", ToastAndroid.SHORT);
-      showMessage("Autorizando cancelación...");
       
       const response = await updateSellDetailStatus(params.sellDetailStatusId, "ACCEPTED");
       
       if (response && response.type === "SUCCESS") {
-        // ToastAndroid.show("Cancelación autorizada exitosamente", ToastAndroid.SHORT);
-        showMessage("Cancelación autorizada exitosamente");
+        ToastAndroid.show("Cancelación autorizada exitosamente", ToastAndroid.SHORT);
         router.back();
       } else {
-        // ToastAndroid.show(response?.text || "Error al autorizar la cancelación", ToastAndroid.SHORT);
-        showMessage(response?.text || "Error al autorizar la cancelación");
+        ToastAndroid.show(response?.text || "Error al autorizar la cancelación", ToastAndroid.SHORT);
       }
     } catch (error) {
       console.error("Error al autorizar:", error);
-      // ToastAndroid.show("Error al autorizar la cancelación", ToastAndroid.SHORT);
-      showMessage("Error al autorizar la cancelación");
+      ToastAndroid.show("Error al autorizar la cancelación", ToastAndroid.SHORT);
     } finally {
       setProcessing(false);
     }
@@ -47,23 +33,19 @@ export default function CancelOrder() {
   const handleDenegar = async () => {
     try {
       setProcessing(true);
-      // ToastAndroid.show("Denegando cancelación...", ToastAndroid.SHORT);
-      showMessage("Denegando cancelación...");
+      ToastAndroid.show("Denegando cancelación...", ToastAndroid.SHORT);
       
       const response = await updateSellDetailStatus(params.sellDetailStatusId, "REJECTED");
       
       if (response && response.type === "SUCCESS") {
-        // ToastAndroid.show("Cancelación denegada", ToastAndroid.SHORT);
-        showMessage("Cancelación denegada");
+        ToastAndroid.show("Cancelación denegada", ToastAndroid.SHORT);
         router.back();
       } else {
-        // ToastAndroid.show(response?.text || "Error al denegar la cancelación", ToastAndroid.SHORT);
-        showMessage(response?.text || "Error al denegar la cancelación");
+        ToastAndroid.show(response?.text || "Error al denegar la cancelación", ToastAndroid.SHORT);
       }
     } catch (error) {
       console.error("Error al denegar:", error);
-      // ToastAndroid.show("Error al denegar la cancelación", ToastAndroid.SHORT);
-      showMessage("Error al denegar la cancelación");
+      ToastAndroid.show("Error al denegar la cancelación", ToastAndroid.SHORT);
     } finally {
       setProcessing(false);
     }
@@ -88,14 +70,14 @@ export default function CancelOrder() {
       </Text>
 
       {/* Detalles del producto */}
-          <View
-            className="flex-row items-center p-3 rounded-lg mb-2 shadow-sm"
-            style={{ backgroundColor: style.BgCard }}
-          >
-            <Image
+      <View
+        className="flex-row items-center p-3 rounded-lg mb-2 shadow-sm"
+        style={{ backgroundColor: style.BgCard }}
+      >
+        <Image
           source={{ uri: "https://cdn-icons-png.flaticon.com/512/1046/1046784.png" }}
-              className="w-10 h-10 rounded-full mr-4"
-            />
+          className="w-10 h-10 rounded-full mr-4"
+        />
         <View className="flex-1">
           <Text className="text-lg font-semibold" style={{ color: style.H2 }}>
             {params.name}
@@ -109,8 +91,8 @@ export default function CancelOrder() {
           <Text style={{ color: style.H3 }}>
             Estado: {params.status}
           </Text>
-            </View>
-          </View>
+        </View>
+      </View>
 
       {/* Botones de acción */}
       <View className="mt-4">
@@ -128,7 +110,7 @@ export default function CancelOrder() {
         <TouchableOpacity
           className="p-3 rounded-lg items-center"
           onPress={handleDenegar}
-          style={{ backgroundColor: "#E53935" }} 
+          style={{ backgroundColor: "#E53935" }}
           disabled={processing}
         >
           <Text className="font-semibold text-white">

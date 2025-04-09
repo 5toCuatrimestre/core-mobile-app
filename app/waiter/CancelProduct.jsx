@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ToastAndroid, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { createCancelRequest, checkCancelRequestStatus, rejectCancelRequest } from '../../api/services/forWaiter';
-import { updateSellDetail } from '../../api/services/waiterService';
+import { createCancelRequest, checkCancelRequestStatus, rejectCancelRequest, updateSellDetail } from '../../api/services/forWaiter';
 import { StyleContext } from '../../utils/StyleContext';
 
 export default function CancelProduct() {
   const { style } = useContext(StyleContext);
-  const { sellDetailId, positionSiteId, name, nameWaiter, quantity, totalPlatillos } = useLocalSearchParams();
+  const { sellDetailId, positionSiteId, name, nameWaiter, quantity, totalPlatillos, productId, sellId } = useLocalSearchParams();
   const [cancelQuantity, setCancelQuantity] = useState(1);
   const [processing, setProcessing] = useState(false);
   const [sellDetailStatusId, setSellDetailStatusId] = useState(null);
@@ -41,9 +40,14 @@ export default function CancelProduct() {
             if (status === 'ACCEPTED') {
               try {
                 // Actualizar la cantidad en el detalle de venta
-                const newQuantity = parseInt(quantity) - cancelQuantity;
-                console.log('Actualizando cantidad:', { sellDetailId, newQuantity });
-                const updateResponse = await updateSellDetail(sellDetailId, newQuantity);
+                const nuevaCantidad = parseInt(quantity) - cancelQuantity;
+                console.log('Actualizando cantidad:', { sellDetailId, sellId, productId, nuevaCantidad });
+                const updateResponse = await updateSellDetail(
+                  sellDetailId,
+                  sellId,
+                  parseInt(productId),
+                  nuevaCantidad
+                );
                 console.log('Respuesta de actualización:', updateResponse);
                 
                 if (updateResponse && updateResponse.type === 'SUCCESS') {

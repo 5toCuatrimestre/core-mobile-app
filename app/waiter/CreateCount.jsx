@@ -214,7 +214,9 @@ export default function CreateCount() {
           name: producto.nombre,
           nameWaiter: "Isaac", // Aquí deberías obtener el nombre del mesero actual
           quantity: producto.cantidad, // Enviar la cantidad real del producto
-          totalPlatillos: producto.cantidad // Enviar el total de platillos
+          totalPlatillos: producto.cantidad, // Enviar el total de platillos
+          productId: producto.id, // Enviar el ID del producto
+          sellId: sellId // Enviar el ID de la venta
         }
       });
     } catch (error) {
