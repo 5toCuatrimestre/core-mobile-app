@@ -315,7 +315,7 @@ export default function CreateCount() {
         <View className="mb-4 relative">
           <TextInput
             className="p-3 pl-10 border rounded-full"
-            placeholder="Search here"
+            placeholder="Buscar platillos agregados"
             placeholderTextColor="#888"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -325,6 +325,12 @@ export default function CreateCount() {
               color: "#333" 
             }}
           />
+        <View className="absolute left-3 top-3">
+                  <Text>🔍</Text>
+                </View>
+              
+                
+          
           <TouchableOpacity 
             className="absolute right-2 top-2 bg-blue-500 w-8 h-8 rounded-full flex items-center justify-center"
             style={{ backgroundColor: "#1e88e5" }}

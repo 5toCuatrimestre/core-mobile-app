@@ -135,7 +135,7 @@ export default function MenuPlatillos({ onAgregarPlatillo }) {
             color: "#333" 
           }}
         />
-        <View className="absolute left-3 top-3">
+      <View className="absolute left-3 top-3">
           <Text>🔍</Text>
         </View>
       </View>

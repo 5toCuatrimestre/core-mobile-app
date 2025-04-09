@@ -1,17 +1,22 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useLayoutEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ToastAndroid, ActivityIndicator } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { createCancelRequest, checkCancelRequestStatus, rejectCancelRequest, updateSellDetail } from '../../api/services/forWaiter';
 import { StyleContext } from '../../utils/StyleContext';
 
 export default function CancelProduct() {
   const { style } = useContext(StyleContext);
   const { sellDetailId, positionSiteId, name, nameWaiter, quantity, totalPlatillos, productId, sellId } = useLocalSearchParams();
+  const navigation = useNavigation();
   const [cancelQuantity, setCancelQuantity] = useState(1);
   const [processing, setProcessing] = useState(false);
   const [sellDetailStatusId, setSellDetailStatusId] = useState(null);
   const [requestSent, setRequestSent] = useState(false);
   const [countdown, setCountdown] = useState(15);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: "Cancelar productos" });
+  }, [navigation]);
 
   useEffect(() => {
     let interval;
@@ -146,8 +151,6 @@ export default function CancelProduct() {
 
   return (
     <View style={[styles.container, { backgroundColor: style.BgInterface }]}>
-      <Text style={[styles.title, { color: style.H1 }]}>Cancelar Producto</Text>
-      
       <View style={[styles.infoContainer, { backgroundColor: style.BgCard }]}>
         <Text style={[styles.label, { color: style.H2 }]}>Producto: {name}</Text>
         <Text style={[styles.label, { color: style.H2 }]}>Mesero: {nameWaiter}</Text>
@@ -164,15 +167,15 @@ export default function CancelProduct() {
                 onPress={handleDecrement}
                 disabled={processing}
               >
-                <Text style={[styles.quantityButtonText, { color: style.H2 }]}>-</Text>
+                <Text style={[styles.quantityButtonText, { color: style.P }]}>-</Text>
               </TouchableOpacity>
               <Text style={[styles.quantityText, { color: style.H2 }]}>{cancelQuantity}</Text>
               <TouchableOpacity 
-                style={[styles.quantityButton, { backgroundColor: style.BgButton }]} 
+                style={[styles.quantityButton, { backgroundColor: style.H2 }]} 
                 onPress={handleIncrement}
                 disabled={processing}
               >
-                <Text style={[styles.quantityButtonText, { color: style.H2 }]}>+</Text>
+                <Text style={[styles.quantityButtonText, { color: style.P }]}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
