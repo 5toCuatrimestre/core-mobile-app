@@ -155,10 +155,6 @@ export default function Dashboard() {
 
   return (
     <View className="flex-1 p-4" style={{ backgroundColor: style.BgInterface }}>
-      {/* Barra de título */}
-      <Text className="text-xl font-bold mb-4 text-center" style={{ color: style.H2 }}>
-        Solicitudes de Cancelación
-      </Text>
 
       {/* Lista de solicitudes pendientes */}
       {pendingDetails.length > 0 ? (
