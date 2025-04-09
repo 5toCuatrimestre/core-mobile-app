@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * En producción debería cambiarse por la URL real del servidor.
  */
 export const baseURL = "http://192.168.0.146:5000/core";
+export const webUrl = "http://192.168.0.146:5173/";
 
 /**
  * Función para realizar el inicio de sesión del usuario.
