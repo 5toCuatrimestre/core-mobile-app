@@ -1,9 +1,19 @@
 import React, { useState, useContext, useEffect } from "react";
-import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, ToastAndroid } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Routes } from "../../../utils/routes";
 import { StyleContext } from "../../../utils/StyleContext";
 import { checkPendingSellDetails, updateSellDetailStatus } from "../../../api/services/waiterService";
+import * as Notifications from 'expo-notifications';
+
+// Configurar el comportamiento de las notificaciones
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 export default function Dashboard() {
   const router = useRouter();
@@ -11,12 +21,36 @@ export default function Dashboard() {
   const [pendingDetails, setPendingDetails] = useState([]);
   const { style } = useContext(StyleContext);
 
+  useEffect(() => {
+    // Solicitar permisos al cargar el componente
+    const requestPermissions = async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permisos de notificación denegados');
+      }
+    };
+    requestPermissions();
+
+    // Configurar el listener para cuando se presiona una notificación
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data?.type === 'cancel_request') {
+        router.push({
+          pathname: "/leader/CancelOrder",
+          params: data.params
+        });
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   // Función para verificar detalles pendientes
   const checkPendingDetails = async () => {
     try {
       const response = await checkPendingSellDetails();
-      console.log("Respuesta de detalles pendientes:", response);
-      
       if (response && response.type === "SUCCESS" && Array.isArray(response.result)) {
         setPendingDetails(response.result);
       } else {
@@ -24,14 +58,20 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error("Error al verificar detalles pendientes:", error);
-      ToastAndroid.show("Error al verificar detalles pendientes", ToastAndroid.SHORT);
     }
   };
 
   // Función para manejar la actualización del estado
   const handleStatusUpdate = async (sellDetailStatusId, status) => {
     if (!sellDetailStatusId) {
-      ToastAndroid.show("Error: ID de detalle no válido", ToastAndroid.SHORT);
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Error",
+          body: "Error: ID de detalle no válido",
+          sound: true,
+        },
+        trigger: null,
+      });
       return;
     }
 
@@ -40,22 +80,50 @@ export default function Dashboard() {
       const response = await updateSellDetailStatus(sellDetailStatusId, status);
       
       if (response && response.type === "SUCCESS") {
-        ToastAndroid.show(`Cancelación ${status === "ACCEPTED" ? "aceptada" : "rechazada"}`, ToastAndroid.SHORT);
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Éxito",
+            body: `Cancelación ${status === "ACCEPTED" ? "aceptada" : "rechazada"}`,
+            sound: true,
+          },
+          trigger: null,
+        });
         await checkPendingDetails();
       } else {
-        ToastAndroid.show(response?.text || "Error al actualizar el estado", ToastAndroid.SHORT);
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "Error",
+            body: response?.text || "Error al actualizar el estado",
+            sound: true,
+          },
+          trigger: null,
+        });
       }
     } catch (error) {
       console.error("Error al actualizar el estado:", error);
-      ToastAndroid.show("Error al actualizar el estado", ToastAndroid.SHORT);
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Error",
+          body: "Error al actualizar el estado",
+          sound: true,
+        },
+        trigger: null,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDetailPress = (detail) => {
+  const handleDetailPress = async (detail) => {
     if (!detail || !detail.sellDetailStatusId) {
-      ToastAndroid.show("Error: Detalle no válido", ToastAndroid.SHORT);
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Error",
+          body: "Error: Detalle no válido",
+          sound: true,
+        },
+        trigger: null,
+      });
       return;
     }
 
@@ -74,9 +142,12 @@ export default function Dashboard() {
     });
   };
 
-  // Configurar el intervalo para verificar cada 2 segundos
+  // Configurar el intervalo para verificar cada 5 segundos
   useEffect(() => {
-    const interval = setInterval(checkPendingDetails, 2000);
+    const interval = setInterval(checkPendingDetails, 5000);
+    
+    // Verificar inmediatamente al cargar
+    checkPendingDetails();
     
     // Limpiar el intervalo cuando el componente se desmonte
     return () => clearInterval(interval);
